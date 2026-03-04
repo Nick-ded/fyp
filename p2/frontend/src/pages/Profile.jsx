@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Upload as UploadIcon, FileText, CheckCircle, AlertCircle, LogOut } from 'lucide-react';
+import { User, Mail, FileText, CheckCircle, AlertCircle, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { getCurrentUser, uploadResume } from '../api/api';
+import EnhancedResumeUpload from '../components/EnhancedResumeUpload';
+import { getCurrentUser } from '../api/api';
 
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,25 +28,13 @@ const Profile = () => {
     }
   };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleResumeUploadSuccess = (result) => {
+    // Reload user profile to get updated resume info
+    loadUserProfile();
+  };
 
-    setError('');
-    setUploadSuccess(false);
-    setUploading(true);
-
-    try {
-      const response = await uploadResume(file);
-      setUploadSuccess(true);
-      // Reload user profile to get updated resume info
-      await loadUserProfile();
-      setTimeout(() => setUploadSuccess(false), 3000);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to upload resume');
-    } finally {
-      setUploading(false);
-    }
+  const handleResumeUploadError = (error) => {
+    console.error('Resume upload error:', error);
   };
 
   const handleLogout = () => {
@@ -126,127 +112,122 @@ const Profile = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="glass rounded-2xl p-8 border border-white/10"
+            className="mb-12"
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold mb-2">📄 Resume Management</h2>
+              <p className="text-gray-400">Upload and manage your professional resume</p>
+            </div>
+            
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Upload Component */}
+              <div className="lg:col-span-2">
+                <EnhancedResumeUpload
+                  onUploadSuccess={handleResumeUploadSuccess}
+                  onUploadError={handleResumeUploadError}
+                />
+              </div>
+
+              {/* Current Resume Status */}
               <div>
-                <h3 className="text-2xl font-bold mb-2">Resume</h3>
-                <p className="text-gray-400">Upload your resume for AI interview preparation</p>
-              </div>
-              <FileText className="w-12 h-12 text-blue-400" />
-            </div>
-
-            {/* Success/Error Messages */}
-            {uploadSuccess && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-green-500/10 border border-green-500/50 rounded-lg p-4 flex items-center space-x-3 mb-6"
-              >
-                <CheckCircle className="w-5 h-5 text-green-400" />
-                <p className="text-sm text-green-400">Resume uploaded successfully!</p>
-              </motion.div>
-            )}
-
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 flex items-center space-x-3 mb-6"
-              >
-                <AlertCircle className="w-5 h-5 text-red-400" />
-                <p className="text-sm text-red-400">{error}</p>
-              </motion.div>
-            )}
-
-            {/* Current Resume Status */}
-            {user?.resume_filename ? (
-              <div className="glass rounded-lg p-6 mb-6 border border-green-500/30">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                      <CheckCircle className="w-6 h-6 text-green-400" />
+                {user?.resume_filename ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="glass rounded-2xl p-6 border border-green-500/30 h-full"
+                  >
+                    <div className="flex items-start space-x-3 mb-4">
+                      <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 text-green-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-green-400">Resume Active</h4>
+                        <p className="text-xs text-gray-500">Ready to use</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold mb-1">Resume Uploaded</h4>
-                      <p className="text-sm text-gray-400 mb-1">{user.resume_filename}</p>
-                      <p className="text-xs text-gray-500">
-                        Uploaded on {new Date(user.resume_uploaded_at).toLocaleString()}
-                      </p>
+
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-400 font-medium mb-1">Filename</p>
+                        <p className="text-sm text-gray-300 break-all">{user.resume_filename}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-gray-400 font-medium mb-1">Uploaded</p>
+                        <p className="text-sm text-gray-300">
+                          {new Date(user.resume_uploaded_at).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      {user.resume_text && (
+                        <div>
+                          <p className="text-xs text-gray-400 font-medium mb-2">Preview</p>
+                          <div className="p-3 bg-white/5 rounded border border-white/10 max-h-32 overflow-y-auto">
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                              {user.resume_text.substring(0, 300)}...
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="glass rounded-2xl p-6 border border-yellow-500/30 h-full flex flex-col items-center justify-center text-center"
+                  >
+                    <div className="text-4xl mb-3">📋</div>
+                    <h4 className="font-semibold text-yellow-400 mb-1">No Resume Yet</h4>
+                    <p className="text-xs text-gray-400">
+                      Upload your resume to get started with personalized interview questions
+                    </p>
+                  </motion.div>
+                )}
               </div>
-            ) : (
-              <div className="glass rounded-lg p-6 mb-6 border border-yellow-500/30">
-                <div className="flex items-center space-x-3">
-                  <AlertCircle className="w-6 h-6 text-yellow-400" />
-                  <p className="text-sm text-yellow-400">No resume uploaded yet</p>
-                </div>
-              </div>
-            )}
-
-            {/* Upload Button */}
-            <div className="relative">
-              <input
-                type="file"
-                id="resume-upload"
-                className="hidden"
-                accept=".pdf,.doc,.docx,.txt"
-                onChange={handleFileUpload}
-                disabled={uploading}
-              />
-              <label htmlFor="resume-upload">
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`w-full px-6 py-4 bg-gradient-accent text-white rounded-xl font-semibold text-lg professional-glow hover:shadow-xl transition-all flex items-center justify-center space-x-2 cursor-pointer ${
-                    uploading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {uploading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UploadIcon className="w-5 h-5" />
-                      <span>{user?.resume_filename ? 'Update Resume' : 'Upload Resume'}</span>
-                    </>
-                  )}
-                </motion.div>
-              </label>
             </div>
-
-            <p className="text-xs text-gray-500 text-center mt-4">
-              Supported formats: PDF, DOC, DOCX, TXT (Max 10MB)
-            </p>
           </motion.div>
 
           {/* Info Cards */}
-          <div className="grid md:grid-cols-3 gap-6 mt-6">
-            <div className="glass rounded-xl p-6 border border-white/10">
+          <div className="grid md:grid-cols-3 gap-6 mt-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="glass rounded-xl p-6 border border-white/10"
+            >
               <div className="text-3xl mb-2">🎯</div>
               <h3 className="font-semibold mb-2">Personalized Questions</h3>
               <p className="text-sm text-gray-400">
                 AI generates interview questions based on your resume
               </p>
-            </div>
-            <div className="glass rounded-xl p-6 border border-white/10">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="glass rounded-xl p-6 border border-white/10"
+            >
               <div className="text-3xl mb-2">📊</div>
               <h3 className="font-semibold mb-2">Track Progress</h3>
               <p className="text-sm text-gray-400">
                 Monitor your interview performance over time
               </p>
-            </div>
-            <div className="glass rounded-xl p-6 border border-white/10">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="glass rounded-xl p-6 border border-white/10"
+            >
               <div className="text-3xl mb-2">🔒</div>
               <h3 className="font-semibold mb-2">Secure Storage</h3>
               <p className="text-sm text-gray-400">
                 Your resume is encrypted and kept private
               </p>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

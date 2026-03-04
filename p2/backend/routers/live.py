@@ -41,7 +41,8 @@ async def live_interview(websocket: WebSocket):
         "smile": [],
         "engagement": [],
         "face_detected": [],
-        "centering": []
+        "centering": [],
+        "emotions": []  # Track emotions over time
     }
     
     try:
@@ -74,8 +75,10 @@ async def live_interview(websocket: WebSocket):
                 frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 
                 # Process frame (sample every 3rd frame for better accuracy)
+                # Run emotion detection more frequently for better visibility
                 if frame_count % 3 == 0:
-                    metrics = process_frame_facial(frame)
+                    detect_emotion = (frame_count % 6 == 0)  # Emotion every 6th frame (~1 second)
+                    metrics = process_frame_facial(frame, detect_emotion=detect_emotion)
                     
                     if metrics:
                         accumulated_metrics["eye_contact"].append(metrics["eye_contact"])
@@ -85,16 +88,35 @@ async def live_interview(websocket: WebSocket):
                         accumulated_metrics["centering"].append(metrics.get("centering", 0.5))
                         accumulated_metrics["face_detected"].append(1)
                         
-                        # Send real-time feedback with enhanced metrics
+                        # Track emotion if available
+                        if "emotion" in metrics:
+                            accumulated_metrics["emotions"].append(metrics["emotion"])
+                            print(f"✅ Emotion detected: {metrics['emotion']} ({metrics.get('emotion_confidence', 0):.1f}%)")
+                            print(f"   Sending to frontend: {metrics['emotion']}")
+                        else:
+                            if detect_emotion:
+                                print(f"⚠️ Emotion detection ran but no emotion found (frame {frame_count})")
+                        
+                        # Send real-time feedback with enhanced metrics including emotion
+                        response_data = {
+                            "eye_contact": metrics["eye_contact"],
+                            "head_stability": metrics["head_stability"],
+                            "smile": metrics["smile"],
+                            "engagement": metrics.get("engagement", 0.5),
+                            "centering": metrics.get("centering", 0.5)
+                        }
+                        
+                        # Add emotion data if available
+                        if "emotion" in metrics:
+                            response_data["emotion"] = str(metrics["emotion"])
+                            response_data["emotion_confidence"] = float(metrics.get("emotion_confidence", 0))
+                            # Convert all_emotions dict values to regular floats
+                            all_emotions = metrics.get("all_emotions", {})
+                            response_data["all_emotions"] = {k: float(v) for k, v in all_emotions.items()}
+                        
                         await websocket.send_json({
                             "type": "metrics",
-                            "data": {
-                                "eye_contact": metrics["eye_contact"],
-                                "head_stability": metrics["head_stability"],
-                                "smile": metrics["smile"],
-                                "engagement": metrics.get("engagement", 0.5),
-                                "centering": metrics.get("centering", 0.5)
-                            }
+                            "data": response_data
                         })
                     else:
                         accumulated_metrics["face_detected"].append(0)

@@ -13,6 +13,7 @@ from services.file_handler import save_upload_file, cleanup_file
 from services.video_processing import process_video_facial
 from services.audio_processing import process_audio
 from services.scoring_engine import compute_confidence_score, generate_feedback
+from utils.file_validation import FileValidator
 
 router = APIRouter()
 
@@ -22,11 +23,12 @@ async def upload_video(
     db: Session = Depends(get_db)
 ):
     """
-    Upload and process interview video
+    Upload and process interview video with comprehensive validation
     Returns analysis results and stores in database
     """
-    if not file.content_type.startswith("video/"):
-        raise HTTPException(status_code=400, detail="File must be a video")
+    
+    # Comprehensive file validation
+    await FileValidator.validate_video(file)
     
     video_path = None
     audio_path = None
@@ -34,6 +36,17 @@ async def upload_video(
     try:
         # Save uploaded file
         video_path = await save_upload_file(file)
+        
+        # Additional MIME type validation on saved file
+        try:
+            from utils.file_validation import ALLOWED_VIDEO_TYPES
+            FileValidator.validate_mime_type(video_path, ALLOWED_VIDEO_TYPES)
+        except Exception as e:
+            cleanup_file(video_path)
+            raise HTTPException(
+                status_code=400,
+                detail=f"File validation failed: {str(e)}"
+            )
         
         # Process video for facial metrics
         facial_metrics = process_video_facial(video_path)
@@ -78,6 +91,8 @@ async def upload_video(
             "speech_metrics": speech_metrics
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
     

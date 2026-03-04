@@ -11,6 +11,13 @@ const LiveInterview = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timer, setTimer] = useState(0);
   const videoRef = useRef(null);
+  
+  // Emotion detection state
+  const [currentEmotion, setCurrentEmotion] = useState(null);
+  const [emotionConfidence, setEmotionConfidence] = useState(0);
+  const [wsConnected, setWsConnected] = useState(false);
+  const wsRef = useRef(null);
+  const frameIntervalRef = useRef(null);
 
   const questions = [
     "Tell me about yourself and your background.",
@@ -29,6 +36,21 @@ const LiveInterview = () => {
     }
     return () => clearInterval(interval);
   }, [isRecording]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (frameIntervalRef.current) {
+        clearInterval(frameIntervalRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -45,6 +67,52 @@ const LiveInterview = () => {
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
+          
+          // Setup WebSocket for emotion detection
+          try {
+            const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            wsRef.current = new WebSocket('ws://localhost:8000/api/live');
+            
+            wsRef.current.onopen = () => {
+              console.log('WebSocket connected for emotion detection');
+              setWsConnected(true);
+              wsRef.current.send(JSON.stringify({
+                type: 'init',
+                session_id: sessionId,
+                start_time: Date.now()
+              }));
+            };
+            
+            wsRef.current.onmessage = (event) => {
+              const data = JSON.parse(event.data);
+              if (data.type === 'metrics' && data.data.emotion) {
+                console.log('Emotion received:', data.data.emotion, data.data.emotion_confidence);
+                setCurrentEmotion(data.data.emotion);
+                setEmotionConfidence(data.data.emotion_confidence || 0);
+              }
+            };
+            
+            wsRef.current.onerror = (error) => {
+              console.log('WebSocket error:', error);
+            };
+            
+            // Send video frames for emotion detection
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            frameIntervalRef.current = setInterval(() => {
+              if (videoRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+                canvas.width = videoRef.current.videoWidth;
+                canvas.height = videoRef.current.videoHeight;
+                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                wsRef.current.send(JSON.stringify({ 
+                  frame: canvas.toDataURL('image/jpeg', 0.8) 
+                }));
+              }
+            }, 200); // Send frame every 200ms
+            
+          } catch (wsError) {
+            console.log('Could not connect WebSocket:', wsError);
+          }
         })
         .catch(err => console.error('Error accessing media devices:', err));
     }
@@ -54,6 +122,14 @@ const LiveInterview = () => {
     setIsRecording(false);
     if (videoRef.current && videoRef.current.srcObject) {
       videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+    }
+    // Close WebSocket
+    if (frameIntervalRef.current) {
+      clearInterval(frameIntervalRef.current);
+    }
+    if (wsRef.current) {
+      wsRef.current.close();
+      setWsConnected(false);
     }
   };
 
@@ -241,6 +317,60 @@ const LiveInterview = () => {
                     {isRecording ? Math.min(82 + Math.floor(Math.random() * 12), 94) : '--'}
                   </div>
                   <div className="text-xs text-gray-400 mt-1">Engagement</div>
+                </div>
+              </div>
+
+              {/* EMOTION DETECTION BOX - Styled to match website */}
+              <div className="glass rounded-xl p-6 mt-4 border border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <span className="text-2xl">🎭</span>
+                    Emotion Detection
+                  </h3>
+                  <div className={`text-xs px-2 py-1 rounded-full ${wsConnected ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                    {wsConnected ? '● Live' : '● Connecting...'}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 rounded-full bg-gradient-accent flex items-center justify-center text-4xl">
+                      {currentEmotion === 'happy' && '😊'}
+                      {currentEmotion === 'sad' && '😢'}
+                      {currentEmotion === 'angry' && '😠'}
+                      {currentEmotion === 'surprise' && '😲'}
+                      {currentEmotion === 'fear' && '😨'}
+                      {currentEmotion === 'disgust' && '🤢'}
+                      {currentEmotion === 'neutral' && '😐'}
+                      {!currentEmotion && '⏳'}
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-sm text-gray-400">Emotion:</span>
+                      <span className="text-lg font-semibold text-white capitalize">
+                        {currentEmotion || 'Detecting...'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-400">Confidence:</span>
+                      <span className="text-white font-medium">
+                        {emotionConfidence ? emotionConfidence.toFixed(1) : '0.0'}%
+                      </span>
+                    </div>
+                    
+                    {/* Progress bar */}
+                    <div className="mt-2 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-accent"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${emotionConfidence || 0}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

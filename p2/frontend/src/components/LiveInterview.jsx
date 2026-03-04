@@ -27,6 +27,8 @@ function LiveInterview() {
   const [wsConnected, setWsConnected] = useState(false)
   const [faceDetectionCount, setFaceDetectionCount] = useState(0)
   const [totalFramesProcessed, setTotalFramesProcessed] = useState(0)
+  const [currentEmotion, setCurrentEmotion] = useState(null)
+  const [emotionConfidence, setEmotionConfidence] = useState(0)
   
   // Results state
   const [overallResults, setOverallResults] = useState(null)
@@ -45,8 +47,13 @@ function LiveInterview() {
   const handleStartInterview = async (e) => {
     e.preventDefault()
     
-    if (!resume || !jobDescription.trim()) {
-      alert('Please upload a resume and provide a job description')
+    if (!resume) {
+      alert('Please upload your resume first')
+      return
+    }
+    
+    if (!jobDescription.trim()) {
+      alert('Please provide the job description for the company you want to interview with')
       return
     }
     
@@ -58,18 +65,29 @@ function LiveInterview() {
       formData.append('job_description', jobDescription)
       formData.append('num_questions', numQuestions)
       
+      console.log('Starting AI interview with:', {
+        resume: resume.name,
+        jobDescLength: jobDescription.length,
+        numQuestions
+      })
+      
       const response = await api.post('/ai-interview/start', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
+      
+      console.log('Interview started:', response.data)
       
       if (response.data.success) {
         setAiSessionId(response.data.session_id)
         setQuestions(response.data.questions)
         setStep('interview')
+        // Auto-start the interview after questions are generated
+        setTimeout(() => startInterview(), 500)
       }
     } catch (error) {
       console.error('Error starting interview:', error)
-      alert(error.response?.data?.detail || 'Failed to start interview')
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to start interview'
+      alert(`Error: ${errorMsg}`)
     } finally {
       setIsGenerating(false)
     }
@@ -124,6 +142,24 @@ function LiveInterview() {
               setTotalFramesProcessed(prev => prev + 1)
               if (!data.data.no_face) {
                 setFaceDetectionCount(prev => prev + 1)
+              }
+              
+              // Debug: Log all received data
+              console.log('📊 Metrics received:', {
+                eye_contact: data.data.eye_contact,
+                engagement: data.data.engagement,
+                has_emotion: !!data.data.emotion,
+                emotion: data.data.emotion,
+                emotion_confidence: data.data.emotion_confidence
+              })
+              
+              // Update emotion state if available
+              if (data.data.emotion) {
+                console.log('🎭 Emotion received:', data.data.emotion, 'Confidence:', data.data.emotion_confidence)
+                setCurrentEmotion(data.data.emotion)
+                setEmotionConfidence(data.data.emotion_confidence || 0)
+              } else {
+                console.log('⚠️ No emotion in this frame')
               }
             }
           }
@@ -398,10 +434,15 @@ function LiveInterview() {
       {step === 'setup' && (
         <form onSubmit={handleStartInterview} className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg mb-4">
-            <p className="text-sm text-blue-800">
-              📌 This interview combines AI question generation with live video analysis. 
-              Upload your resume and job description to get started!
+            <p className="text-sm text-blue-800 font-semibold mb-2">
+              📌 How it works:
             </p>
+            <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+              <li>Upload your resume (PDF, DOCX, or TXT)</li>
+              <li>Enter the job description for the company you're targeting</li>
+              <li>Our AI will scan your resume and generate personalized interview questions</li>
+              <li>Answer questions via video while we analyze your performance</li>
+            </ol>
           </div>
           
           <div>
@@ -424,16 +465,19 @@ function LiveInterview() {
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Job Description
+              Job Description / Company & Role
             </label>
             <textarea
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
               rows={6}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Paste the job description here..."
+              placeholder="Paste the job description here, or describe the company and role you're interviewing for (e.g., 'Software Engineer at Google - Full stack development with React and Python')..."
               required
             />
+            <p className="mt-1 text-xs text-gray-500">
+              The AI will analyze your resume against this job description to generate relevant questions
+            </p>
           </div>
           
           <div>
@@ -453,29 +497,67 @@ function LiveInterview() {
           
           <button
             type="submit"
-            disabled={isGenerating}
+            disabled={isGenerating || !resume || !jobDescription.trim()}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 
-              transition-colors duration-200 font-semibold disabled:bg-gray-400"
+              transition-colors duration-200 font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {isGenerating ? 'Generating Questions...' : 'Start Live Interview'}
+            {isGenerating ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Analyzing Resume & Generating Questions...
+              </span>
+            ) : (
+              '🚀 Generate Questions & Start Interview'
+            )}
           </button>
+          {(!resume || !jobDescription.trim()) && (
+            <p className="text-sm text-gray-500 text-center mt-2">
+              Please upload your resume and enter job description to continue
+            </p>
+          )}
         </form>
       )}
       
       {/* Interview Step */}
       {step === 'interview' && (
         <div className="space-y-4">
+          {/* Interview Context Summary */}
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+            <p className="text-sm font-semibold text-gray-800 mb-2">📋 Interview Context:</p>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-gray-600">Resume:</span>
+                <span className="ml-2 font-medium text-gray-900">{resume?.name}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Questions:</span>
+                <span className="ml-2 font-medium text-gray-900">{questions.length} personalized questions</span>
+              </div>
+            </div>
+            <div className="mt-2">
+              <span className="text-gray-600 text-sm">Target Role:</span>
+              <p className="text-gray-900 font-medium text-sm mt-1 line-clamp-2">{jobDescription.substring(0, 150)}...</p>
+            </div>
+          </div>
+          
           {/* Question Display */}
           <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-lg">
-            <p className="text-sm mb-1">
-              Question {currentQuestionIndex + 1} of {questions.length}
+            <p className="text-sm mb-1 opacity-90">
+              Question {currentQuestionIndex + 1} of {questions.length} • Based on your resume
             </p>
             <p className="text-lg font-medium">
               {questions[currentQuestionIndex]?.question}
             </p>
-            <p className="text-sm mt-2 opacity-90">
-              Type: {questions[currentQuestionIndex]?.type}
-            </p>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-xs px-2 py-1 bg-white bg-opacity-20 rounded">
+                Type: {questions[currentQuestionIndex]?.type}
+              </span>
+              {questions[currentQuestionIndex]?.topic && (
+                <span className="text-xs px-2 py-1 bg-white bg-opacity-20 rounded">
+                  Topic: {questions[currentQuestionIndex]?.topic}
+                </span>
+              )}
+            </div>
           </div>
           
           {/* Video Preview */}
@@ -637,6 +719,59 @@ function LiveInterview() {
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Expression</p>
               </div>
+            </div>
+          )}
+
+          {/* Emotion Detection Display - ALWAYS VISIBLE FOR TESTING */}
+          <div style={{
+            padding: '20px',
+            background: 'linear-gradient(to right, #faf5ff, #fce7f3)',
+            border: '4px solid #9333ea',
+            borderRadius: '8px',
+            marginTop: '16px',
+            marginBottom: '16px',
+            boxShadow: '0 10px 40px rgba(147, 51, 234, 0.5)'
+          }}>
+            <h3 style={{ 
+              fontSize: '24px', 
+              fontWeight: 'bold', 
+              color: '#581c87',
+              marginBottom: '16px'
+            }}>
+              🎭 EMOTION DETECTION - ALWAYS VISIBLE TEST
+            </h3>
+            <p style={{ color: '#1f2937', marginBottom: '8px' }}>
+              isRecording: {isRecording ? 'TRUE ✅' : 'FALSE ❌'}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span style={{ fontSize: '48px' }}>
+                {currentEmotion === 'happy' && '😊'}
+                {currentEmotion === 'sad' && '😢'}
+                {currentEmotion === 'angry' && '😠'}
+                {currentEmotion === 'surprise' && '😲'}
+                {currentEmotion === 'fear' && '😨'}
+                {currentEmotion === 'disgust' && '🤢'}
+                {currentEmotion === 'neutral' && '😐'}
+                {!currentEmotion && '⏳'}
+              </span>
+              <div>
+                <p style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
+                  Emotion: {currentEmotion || 'Detecting...'}
+                </p>
+                <p style={{ fontSize: '14px', color: '#6b7280' }}>
+                  Confidence: {emotionConfidence ? emotionConfidence.toFixed(1) : '0.0'}%
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Debug Display - Remove after testing */}
+          {isRecording && (
+            <div className="p-2 bg-gray-100 rounded text-xs">
+              <p>Debug: currentEmotion = {currentEmotion || 'null'}</p>
+              <p>Debug: emotionConfidence = {emotionConfidence}</p>
+              <p>Debug: isRecording = {isRecording ? 'true' : 'false'}</p>
+              <p>Debug: Condition met = {(currentEmotion && isRecording) ? 'YES' : 'NO'}</p>
             </div>
           )}
           

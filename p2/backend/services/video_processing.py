@@ -9,8 +9,55 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
+# Import DeepFace for emotion detection
+try:
+    from deepface import DeepFace
+    DEEPFACE_AVAILABLE = True
+except ImportError:
+    DEEPFACE_AVAILABLE = False
+    print("Warning: DeepFace not available. Emotion detection will be disabled.")
+
 # Frame sampling rate (process every Nth frame)
 FRAME_SAMPLE_RATE = 10
+
+def detect_emotion_from_frame(frame: np.ndarray) -> Optional[Dict]:
+    """
+    Detect emotion from a single frame using DeepFace
+    
+    Returns:
+        Dictionary with emotion data or None if detection fails:
+        - dominant_emotion: The primary detected emotion
+        - emotions: Dictionary of all emotion scores
+        - confidence: Confidence score for dominant emotion
+    """
+    if not DEEPFACE_AVAILABLE:
+        print("⚠️ DeepFace not available")
+        return None
+    
+    try:
+        # Analyze frame for emotions
+        result = DeepFace.analyze(
+            frame, 
+            actions=['emotion'], 
+            enforce_detection=False,
+            silent=True
+        )
+        
+        # DeepFace returns a list, get first result
+        if isinstance(result, list) and len(result) > 0:
+            result = result[0]
+        
+        emotion_data = {
+            'dominant_emotion': result['dominant_emotion'],
+            'emotions': result['emotion'],
+            'confidence': result['emotion'][result['dominant_emotion']]
+        }
+        print(f"🎭 DeepFace result: {emotion_data['dominant_emotion']} ({emotion_data['confidence']:.1f}%)")
+        return emotion_data
+    except Exception as e:
+        # Log the error for debugging
+        print(f"❌ Emotion detection error: {str(e)}")
+        return None
 
 def process_video_facial(video_path: str) -> Dict[str, float]:
     """
@@ -103,10 +150,14 @@ def process_video_facial(video_path: str) -> Dict[str, float]:
         "face_presence_percentage": float(np.clip(face_presence, 0, 1))
     }
 
-def process_frame_facial(frame: np.ndarray) -> Optional[Dict[str, float]]:
+def process_frame_facial(frame: np.ndarray, detect_emotion: bool = False) -> Optional[Dict[str, float]]:
     """
     Process single frame for live interview mode with enhanced accuracy
     Returns real-time metrics or None if no face detected
+    
+    Args:
+        frame: Input video frame
+        detect_emotion: Whether to run emotion detection (slower, run less frequently)
     """
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
@@ -183,7 +234,7 @@ def process_frame_facial(frame: np.ndarray) -> Optional[Dict[str, float]]:
         # Combined engagement score
         engagement_score = (centering_score * 0.4 + size_score * 0.3 + smile_score * 0.3)
         
-        return {
+        result = {
             "eye_contact": float(eye_contact_score),
             "head_stability": float(centering_score),  # Use centering as proxy for stability
             "smile": float(smile_score),
@@ -191,6 +242,16 @@ def process_frame_facial(frame: np.ndarray) -> Optional[Dict[str, float]]:
             "face_size_ratio": float(face_area_ratio),
             "centering": float(centering_score)
         }
+        
+        # Detect emotion from frame only if requested (slower operation)
+        if detect_emotion:
+            emotion_data = detect_emotion_from_frame(frame)
+            if emotion_data:
+                result["emotion"] = emotion_data["dominant_emotion"]
+                result["emotion_confidence"] = emotion_data["confidence"]
+                result["all_emotions"] = emotion_data["emotions"]
+        
+        return result
     
     return None
 

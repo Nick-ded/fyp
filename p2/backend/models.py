@@ -119,3 +119,8 @@ class User(Base):
     location = Column(String, nullable=True)
     is_active = Column(Integer, default=1)
 
+    # OAuth fields
+    google_id = Column(String, unique=True, nullable=True, index=True)
+    oauth_provider = Column(String, nullable=True)  # 'google', 'github', etc.
+    profile_picture = Column(String, nullable=True)
+
