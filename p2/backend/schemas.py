@@ -74,6 +74,9 @@ class UserResponse(UserBase):
     phone: Optional[str]
     location: Optional[str]
     is_active: int
+    profile_picture: Optional[str] = None
+    google_id: Optional[str] = None
+    oauth_provider: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -89,11 +92,38 @@ class TokenData(BaseModel):
     email: Optional[str] = None
 
 
+class FieldSpecificInsights(BaseModel):
+    """Field-specific resume insights"""
+    matched_skills: List[str]
+    matched_count: int
+    missing_critical: List[str]
+    matched_advanced: List[str]
+    missing_advanced: List[str]
+    strengths: List[str]
+    recommendations: List[str]
+    has_quantifiable_impact: bool
+
+
+class ResumeAnalysis(BaseModel):
+    """Resume analysis scores"""
+    overall: int
+    structure: int
+    skills: int
+    experience: int
+    keywords: int
+    has_contact: bool
+    has_projects: bool
+    has_certifications: bool
+    word_count: int
+    field_specific: Optional[FieldSpecificInsights] = None
+
+
 class ResumeUploadResponse(BaseModel):
     message: str
     filename: str
     resume_text: str
     uploaded_at: datetime
+    analysis: Optional[ResumeAnalysis] = None
 
 
 

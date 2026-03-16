@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, FileText, Video, Mic, Sparkles, Clock, Shield, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -102,7 +102,7 @@ const Upload = () => {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-12 text-center"
+            className="mb-12"
           >
             <Link 
               to="/" 

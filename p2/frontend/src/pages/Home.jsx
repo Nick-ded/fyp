@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import Navbar from '../components/Navbar'
+import PolishedNavbar from '../components/PolishedNavbar'
 import UploadForm from '../components/UploadForm'
 import AIInterview from '../components/AIInterview'
 import { useTheme } from '../context/ThemeContext'
@@ -33,7 +33,7 @@ function Home() {
           }`}>
             <button
               onClick={() => setActiveTab('upload')}
-              className={`px-6 py-3 font-medium transition-colors ${
+              className={`px-6 py-3 font-medium transition-all whitespace-nowrap relative ${
                 activeTab === 'upload'
                   ? 'border-b-2 border-blue-500 text-blue-400'
                   : theme === 'dark'
@@ -42,10 +42,19 @@ function Home() {
               }`}
             >
               Upload Video
-            </button>
-            <button
+              {activeTab === 'upload' && (
+                <motion.div
+                  layoutId="tab-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab('ai')}
-              className={`px-6 py-3 font-medium transition-colors ${
+              className={`px-6 py-3 font-medium transition-all whitespace-nowrap relative flex items-center space-x-2 ${
                 activeTab === 'ai'
                   ? 'border-b-2 border-blue-500 text-blue-400'
                   : theme === 'dark'

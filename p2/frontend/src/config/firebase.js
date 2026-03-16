@@ -27,8 +27,8 @@ if (!isConfigValid) {
 }
 
 // Initialize Firebase
-let app
-let auth
+let app = null
+let auth = null
 
 try {
   app = initializeApp(firebaseConfig)

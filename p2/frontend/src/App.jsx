@@ -21,6 +21,14 @@ import FirebaseSignup from './pages/FirebaseSignup'
 import EnhancedResumeUpload from './pages/EnhancedResumeUpload'
 import Profile from './pages/Profile'
 import TestUpload from './pages/TestUpload'
+import TermsOfService from './pages/TermsOfService'
+import PrivacyPage from './pages/PrivacyPage'
+import CookiePage from './pages/CookiePage'
+import AboutUs from './pages/AboutUs'
+import Pricing from './pages/Pricing'
+import ComingSoon from './pages/ComingSoon'
+import Settings from './pages/Settings'
+import InterviewSelection from './pages/InterviewSelection'
 
 function App() {
   return (

@@ -35,7 +35,7 @@ const SimpleHeroSection = () => {
                   } text-white rounded-full text-sm border backdrop-blur-sm hover:scale-105 transition-all duration-300 cursor-pointer`}
                 >
                   {role}
-                </span>
+                </Link>
               ))}
             </div>
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, Github, Twitter, Linkedin, Mail } from 'lucide-react';
@@ -77,7 +76,7 @@ const Footer = () => {
               <li>
                 <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 rounded px-1">
                   Pricing
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -89,17 +88,17 @@ const Footer = () => {
               <li>
                 <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 rounded px-1">
                   About Us
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 rounded px-1">
                   Careers
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 rounded px-1">
                   Blog
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 rounded px-1">
@@ -116,17 +115,17 @@ const Footer = () => {
               <li>
                 <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 rounded px-1">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 rounded px-1">
                   Terms of Service
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 rounded px-1">
                   Cookie Policy
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

@@ -50,7 +50,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate('/firebase-login');
+      navigate('/login');
       return;
     }
 
@@ -113,7 +113,7 @@ const Profile = () => {
       await signOut(auth);
       localStorage.removeItem('profileData');
       localStorage.removeItem('resumeUploaded');
-      navigate('/firebase-login');
+      navigate('/login');
     } catch (err) {
       console.error('Logout error:', err);
     }
@@ -617,7 +617,7 @@ const Profile = () => {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate('/live-interview')}
+                    onClick={() => navigate('/interview-selection')}
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
                   >
                     Start AI Interview
