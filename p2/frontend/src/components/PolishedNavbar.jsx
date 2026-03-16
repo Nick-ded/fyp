@@ -23,7 +23,18 @@ const PolishedNavbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isActive = useCallback((path) => location.pathname === path, [location.pathname]);
+  // Add Escape key support for mobile menu
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen]);
+
+  const isActive = (path) => location.pathname === path;
 
   const navLinks = [
     { path: '/', label: 'Home' },

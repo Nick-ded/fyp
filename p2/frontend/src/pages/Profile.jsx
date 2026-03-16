@@ -18,10 +18,14 @@ import {
   Clock,
   TrendingUp,
   Home,
+  Sun,
+  Moon,
+  Sparkles,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import EnhancedResumeUpload from '../components/EnhancedResumeUpload';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
@@ -39,8 +43,10 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!user) {
@@ -73,11 +79,22 @@ const Profile = () => {
   };
 
   const handleSaveProfile = async () => {
+    // Validate required fields
+    if (!profileData.fullName.trim()) {
+      alert('Full Name is required');
+      return;
+    }
+    if (!profileData.targetRole.trim()) {
+      alert('Target Role is required');
+      return;
+    }
+
     setSaving(true);
     try {
       localStorage.setItem('profileData', JSON.stringify(profileData));
       setIsEditing(false);
-      alert('Profile updated successfully!');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       console.error('Error saving profile:', err);
       alert('Failed to save profile');
@@ -104,7 +121,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-slate-700 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-400">Loading profile...</p>
@@ -126,32 +143,66 @@ const Profile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'}`}>
       {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700 sticky top-0 z-40">
+      <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-40`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
+            {/* InTrex Logo */}
+            <div className="flex items-center space-x-2">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center professional-glow"
+                style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%)' }}
+              >
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white">Intrex</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Theme Toggle */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleTheme}
+              className={`p-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'hover:bg-slate-700 text-yellow-400' 
+                  : 'hover:bg-gray-100 text-gray-700'
+              }`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </motion.button>
+            
+            {/* Home Button - Moved to Right */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate('/')}
-              className="p-2 hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2 text-white font-medium"
+              className={`p-2 rounded-lg transition-colors flex items-center gap-2 font-medium ${
+                theme === 'dark'
+                  ? 'hover:bg-slate-700 text-white'
+                  : 'hover:bg-gray-100 text-gray-900'
+              }`}
             >
               <Home className="w-5 h-5" />
               <span className="hidden sm:inline">Home</span>
             </motion.button>
-            <h1 className="text-2xl font-bold text-white">Profile</h1>
+            
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className={`md:hidden p-2 rounded-lg transition-colors ${
+                theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-100'
+              }`}
+            >
+              {sidebarOpen ? (
+                <X className={`w-6 h-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`} />
+              ) : (
+                <Menu className={`w-6 h-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`} />
+              )}
+            </button>
           </div>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="md:hidden p-2 hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            {sidebarOpen ? (
-              <X className="w-6 h-6 text-gray-300" />
-            ) : (
-              <Menu className="w-6 h-6 text-gray-300" />
-            )}
-          </button>
         </div>
       </div>
 
@@ -164,20 +215,23 @@ const Profile = () => {
             className={`md:col-span-1 ${sidebarOpen ? 'block' : 'hidden md:block'}`}
           >
             {/* Profile Card */}
-            <div className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-6 mb-6">
+            <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-6 mb-6`}>
               <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-4">
+                <div 
+                  className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-4 professional-glow"
+                  style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%)' }}
+                >
                   {profileData.fullName
                     .split(' ')
                     .map((n) => n[0])
                     .join('')
                     .toUpperCase() || 'U'}
                 </div>
-                <h3 className="text-lg font-bold text-white mb-1">
+                <h3 className={`text-lg font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                   {profileData.fullName || 'User'}
                 </h3>
-                <p className="text-sm text-gray-400 mb-4">{user?.email}</p>
-                <div className="w-full h-1 bg-slate-700 rounded-full mb-4">
+                <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{user?.email}</p>
+                <div className={`w-full h-1 rounded-full mb-4 ${theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'}`}>
                   <div
                     className="h-full bg-blue-600 rounded-full transition-all"
                     style={{
@@ -187,7 +241,7 @@ const Profile = () => {
                     }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-400 mb-4">
+                <p className={`text-xs mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                   {Math.round(
                     (Object.values(profileData).filter((v) => v).length / 5) * 100
                   )}% Complete
@@ -207,7 +261,9 @@ const Profile = () => {
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                       activeTab === item.id
                         ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        : 'text-gray-300 hover:bg-slate-700'
+                        : theme === 'dark'
+                        ? 'text-gray-300 hover:bg-slate-700'
+                        : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -238,6 +294,21 @@ const Profile = () => {
             animate={{ opacity: 1, y: 0 }}
             className="md:col-span-3 space-y-6"
           >
+            {/* Success Message */}
+            {saveSuccess && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 flex items-center gap-3"
+              >
+                <CheckCircle2 className="w-6 h-6 text-green-400 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-green-400">Profile updated successfully!</p>
+                  <p className="text-sm text-green-300">Your changes have been saved.</p>
+                </div>
+              </motion.div>
+            )}
+
             {/* Stats */}
             <div className="grid md:grid-cols-3 gap-4">
               {stats.map((stat, idx) => {
@@ -248,13 +319,13 @@ const Profile = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.1 }}
-                    className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-6"
+                    className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-6`}
                   >
                     <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center mb-4`}>
                       <Icon className="w-6 h-6 text-blue-400" />
                     </div>
-                    <p className="text-sm text-gray-400 mb-1">{stat.label}</p>
-                    <p className="text-2xl font-bold text-white">{stat.value}</p>
+                    <p className={`text-sm mb-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{stat.label}</p>
+                    <p className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{stat.value}</p>
                   </motion.div>
                 );
               })}
@@ -265,10 +336,10 @@ const Profile = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-8"
+                className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-8`}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-white">Profile Information</h2>
+                  <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Profile Information</h2>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -290,21 +361,21 @@ const Profile = () => {
                 </div>
 
                 {/* Email Display */}
-                <div className="mb-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                <div className={`mb-6 p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-700/50 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                     Email Address
                   </label>
                   <div className="flex items-center gap-3">
                     <Mail className="w-5 h-5 text-blue-400" />
-                    <span className="text-white">{user?.email}</span>
+                    <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{user?.email}</span>
                   </div>
                 </div>
 
                 {/* Profile Form */}
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
-                      Full Name
+                    <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                      Full Name *
                     </label>
                     <input
                       type="text"
@@ -313,14 +384,18 @@ const Profile = () => {
                       onChange={handleInputChange}
                       disabled={!isEditing}
                       placeholder="John Doe"
-                      className="w-full px-4 py-3 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-700 disabled:text-gray-400 bg-slate-700 text-white placeholder-gray-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                        theme === 'dark'
+                          ? 'border-slate-600 bg-slate-700 text-white placeholder-gray-500 disabled:bg-slate-700 disabled:text-gray-400'
+                          : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500'
+                      }`}
                     />
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-semibold text-white mb-2">
-                        Current Job Title
+                      <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        Current Job / Role
                       </label>
                       <input
                         type="text"
@@ -329,13 +404,17 @@ const Profile = () => {
                         onChange={handleInputChange}
                         disabled={!isEditing}
                         placeholder="e.g., Software Engineer"
-                        className="w-full px-4 py-3 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-700 disabled:text-gray-400 bg-slate-700 text-white placeholder-gray-500"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                          theme === 'dark'
+                            ? 'border-slate-600 bg-slate-700 text-white placeholder-gray-500 disabled:bg-slate-700 disabled:text-gray-400'
+                            : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500'
+                        }`}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-white mb-2">
-                        Target Role
+                      <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        Targeted Role *
                       </label>
                       <input
                         type="text"
@@ -344,13 +423,17 @@ const Profile = () => {
                         onChange={handleInputChange}
                         disabled={!isEditing}
                         placeholder="e.g., Senior Developer"
-                        className="w-full px-4 py-3 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-700 disabled:text-gray-400 bg-slate-700 text-white placeholder-gray-500"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                          theme === 'dark'
+                            ? 'border-slate-600 bg-slate-700 text-white placeholder-gray-500 disabled:bg-slate-700 disabled:text-gray-400'
+                            : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500'
+                        }`}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                       Years of Experience
                     </label>
                     <select
@@ -358,7 +441,11 @@ const Profile = () => {
                       value={profileData.experience}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      className="w-full px-4 py-3 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-700 disabled:text-gray-400 bg-slate-700 text-white"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                        theme === 'dark'
+                          ? 'border-slate-600 bg-slate-700 text-white disabled:bg-slate-700 disabled:text-gray-400'
+                          : 'border-gray-300 bg-white text-gray-900 disabled:bg-gray-50 disabled:text-gray-500'
+                      }`}
                     >
                       <option value="">Select experience level</option>
                       <option value="0-1">0-1 years</option>
@@ -370,7 +457,7 @@ const Profile = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-white mb-2">
+                    <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                       Key Skills
                     </label>
                     <textarea
@@ -378,9 +465,13 @@ const Profile = () => {
                       value={profileData.skills}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      placeholder="e.g., JavaScript, React, Node.js, Python"
+                      placeholder="e.g., JavaScript, React, Node.js, Python (comma-separated)"
                       rows="4"
-                      className="w-full px-4 py-3 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-700 disabled:text-gray-400 bg-slate-700 text-white placeholder-gray-500 resize-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none ${
+                        theme === 'dark'
+                          ? 'border-slate-600 bg-slate-700 text-white placeholder-gray-500 disabled:bg-slate-700 disabled:text-gray-400'
+                          : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500'
+                      }`}
                     />
                   </div>
 
@@ -405,10 +496,10 @@ const Profile = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-8"
+                className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-8`}
               >
-                <h2 className="text-2xl font-bold text-white mb-2">Resume Management</h2>
-                <p className="text-gray-400 mb-6">
+                <h2 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Resume Management</h2>
+                <p className={`mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                   Upload your resume to get personalized interview questions tailored to your experience.
                 </p>
 
@@ -440,37 +531,38 @@ const Profile = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-8"
+                className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-8`}
               >
-                <h2 className="text-2xl font-bold text-white mb-6">Settings</h2>
+                <h2 className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Settings</h2>
 
                 <div className="space-y-6">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate('/settings')}
-                    className="w-full p-6 bg-blue-500/10 border border-blue-500/30 rounded-lg hover:bg-blue-500/20 transition-all text-left"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                          <Settings className="w-6 h-6 text-blue-400" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-white">Multi-Factor Authentication</p>
-                          <p className="text-sm text-gray-400">
-                            Secure your account with 2FA
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </div>
-                  </motion.button>
-
-                  <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                  {/* Theme Setting */}
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-700/50 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
                     <div>
-                      <p className="font-semibold text-white">Email Notifications</p>
-                      <p className="text-sm text-gray-400">
+                      <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Theme Preference</p>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Choose between light and dark mode
+                      </p>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={toggleTheme}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                        theme === 'dark'
+                          ? 'bg-slate-600 hover:bg-slate-500 text-white'
+                          : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                      }`}
+                    >
+                      {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                      <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                    </motion.button>
+                  </div>
+
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-700/50 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
+                    <div>
+                      <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Email Notifications</p>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                         Receive updates about your interview progress
                       </p>
                     </div>
@@ -481,10 +573,10 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-700/50 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
                     <div>
-                      <p className="font-semibold text-white">Performance Analytics</p>
-                      <p className="text-sm text-gray-400">
+                      <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Performance Analytics</p>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                         Share analytics to help improve our AI
                       </p>
                     </div>
@@ -495,8 +587,8 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="pt-6 border-t border-slate-600">
-                    <h3 className="font-semibold text-white mb-4">Danger Zone</h3>
+                  <div className={`pt-6 border-t ${theme === 'dark' ? 'border-slate-600' : 'border-gray-200'}`}>
+                    <h3 className={`font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Danger Zone</h3>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -517,8 +609,8 @@ const Profile = () => {
                 className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-xl shadow-sm border border-blue-500/30 p-8 text-center"
               >
                 <div className="text-4xl mb-4">🎉</div>
-                <h3 className="text-2xl font-bold text-white mb-2">Ready to Practice?</h3>
-                <p className="text-gray-400 mb-6">
+                <h3 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Ready to Practice?</h3>
+                <p className={`mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                   Your profile is complete. Start practicing with AI-powered interviews now.
                 </p>
                 <div className="flex gap-4 justify-center flex-wrap">
@@ -534,7 +626,11 @@ const Profile = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/dashboard')}
-                    className="px-6 py-3 bg-slate-700 text-white rounded-lg font-semibold hover:bg-slate-600 transition-all border border-slate-600"
+                    className={`px-6 py-3 rounded-lg font-semibold transition-all border ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 text-white hover:bg-slate-600 border-slate-600'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200 border-gray-300'
+                    }`}
                   >
                     View Dashboard
                   </motion.button>

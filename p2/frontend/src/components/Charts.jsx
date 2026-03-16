@@ -1,21 +1,43 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444']
+const COLORS = ['#0066e6', '#10b981', '#f59e0b', '#ef4444']
 
-function Charts({ facialMetrics, speechMetrics }) {
+function Charts({ facialMetrics, speechMetrics, isLoading = false }) {
   // Debug: Log the metrics
   console.log('Facial Metrics:', facialMetrics)
   console.log('Speech Metrics:', speechMetrics)
 
-  // Check if metrics exist
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[1, 2].map((i) => (
+          <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl p-6 animate-pulse">
+            <div className="h-6 bg-slate-700 rounded w-1/3 mb-4"></div>
+            <div className="h-64 bg-slate-700 rounded"></div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Empty state
   if (!facialMetrics || !speechMetrics) {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded">
-        No metrics data available
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[1, 2].map((i) => (
+          <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl p-6 flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="text-4xl mb-3">📊</div>
+              <p className="text-gray-400">No metrics data available</p>
+              <p className="text-sm text-gray-500 mt-2">Complete an interview to see analysis</p>
+            </div>
+          </div>
+        ))}
       </div>
     )
   }

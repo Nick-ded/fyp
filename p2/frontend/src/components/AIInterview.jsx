@@ -2,32 +2,134 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { startAIInterview, submitAnswer, completeInterview } from '../api/api'
+import { batchAnalyzeAnswers, calculateOverallPerformance } from '../services/analysisService'
+import { generateSessionSummary, createInterviewSessionResult, generatePerformanceInsights } from '../services/summaryService'
+import { saveSessionResult } from '../services/sessionStorage'
+import { downloadHTMLReport, downloadTextReport, downloadJSONReport } from '../utils/pdfGenerator'
+import MicrophoneValidator from './MicrophoneValidator'
+import AudioRecorder from './AudioRecorder'
+import QuestionTimer from './QuestionTimer'
+import TranscriptionStatus from './TranscriptionStatus'
+import AnalysisDisplay from './AnalysisDisplay'
+import SessionSummary from './SessionSummary'
+import ResultsPage from './ResultsPage'
 
 function AIInterview() {
-  const [step, setStep] = useState('upload') // upload, interview, results
+  const [step, setStep] = useState('upload') // upload, mic-check, interview, analyzing, results
   const [sessionId, setSessionId] = useState(null)
   const [questions, setQuestions] = useState([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [isRecording, setIsRecording] = useState(false)
-  const [recordingDuration, setRecordingDuration] = useState(0)
   const [answers, setAnswers] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [overallResults, setOverallResults] = useState(null)
+  const [showMicValidator, setShowMicValidator] = useState(false)
+  const [questionSessions, setQuestionSessions] = useState(new Map()) // QuestionSession data
+  const [strictMode, setStrictMode] = useState(false) // Timer pause/resume control
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisProgress, setAnalysisProgress] = useState({ current: 0, total: 0 })
+  const [sessionSummary, setSessionSummary] = useState(null)
+  const [performanceInsights, setPerformanceInsights] = useState(null)
+  const [finalSessionResult, setFinalSessionResult] = useState(null)
   
   // Form state
   const [resume, setResume] = useState(null)
   const [jobDescription, setJobDescription] = useState('')
   const [numQuestions, setNumQuestions] = useState(5)
   const [isGenerating, setIsGenerating] = useState(false)
-  
-  // Recording refs
-  const mediaRecorderRef = useRef(null)
-  const audioChunksRef = useRef([])
-  const streamRef = useRef(null)
-  const timerRef = useRef(null)
-  const startTimeRef = useRef(null)
+  const [targetedRole, setTargetedRole] = useState('Software Developer')
+  const [yearsOfExperience, setYearsOfExperience] = useState(3)
   
   const navigate = useNavigate()
+
+  // Action handlers for ResultsPage
+  const handleRetryInterview = () => {
+    cleanup() // Clean up audio resources
+    setStep('upload')
+    setSessionId(null)
+    setQuestions([])
+    setCurrentQuestionIndex(0)
+    setAnswers([])
+    setOverallResults(null)
+    setResume(null)
+    setJobDescription('')
+    setIsRecording(false)
+    setQuestionSessions(new Map())
+    setStrictMode(false)
+    setIsAnalyzing(false)
+    setAnalysisProgress({ current: 0, total: 0 })
+    setTargetedRole('Software Developer')
+    setYearsOfExperience(3)
+    setSessionSummary(null)
+    setPerformanceInsights(null)
+    setFinalSessionResult(null)
+  }
+
+  const handleGoToDashboard = () => {
+    navigate('/dashboard')
+  }
+
+  const handleDownloadReport = () => {
+    if (finalSessionResult) {
+      // Try to download HTML report first (best formatting)
+      const success = downloadHTMLReport(finalSessionResult)
+      if (success) {
+        alert('Report downloaded successfully!')
+      } else {
+        // Fallback to text report
+        const textSuccess = downloadTextReport(finalSessionResult)
+        if (textSuccess) {
+          alert('Report downloaded as text file!')
+        } else {
+          alert('Failed to generate report. Please try again.')
+        }
+      }
+    } else {
+      alert('No report data available for download')
+    }
+  }
+
+  // Initialize question sessions when questions are loaded
+  useEffect(() => {
+    if (questions.length > 0) {
+      const sessions = new Map()
+      questions.forEach((question, index) => {
+        const questionId = question.id || `question_${index}`
+        sessions.set(questionId, {
+          questionId,
+          questionText: question.question,
+          allocatedTime: question.allocatedTime || 120, // Default 2 minutes
+          timeUsed: 0,
+          skipped: false,
+          audioBlob: null,
+          transcript: null,
+          transcriptionStatus: 'pending',
+          analysis: null,
+          analysisStatus: 'pending'
+        })
+      })
+      setQuestionSessions(sessions)
+    }
+  }, [questions])
+
+  const getCurrentQuestionId = () => {
+    return questions[currentQuestionIndex]?.id || `question_${currentQuestionIndex}`
+  }
+
+  const getCurrentSession = () => {
+    return questionSessions.get(getCurrentQuestionId())
+  }
+
+  const updateQuestionSession = (questionId, updates) => {
+    setQuestionSessions(prev => {
+      const newSessions = new Map(prev)
+      const session = newSessions.get(questionId)
+      if (session) {
+        newSessions.set(questionId, { ...session, ...updates })
+      }
+      return newSessions
+    })
+  }
 
   const handleStartInterview = async (e) => {
     e.preventDefault()
@@ -45,7 +147,7 @@ function AIInterview() {
       if (response.success) {
         setSessionId(response.session_id)
         setQuestions(response.questions)
-        setStep('interview')
+        setShowMicValidator(true) // Show mic validator before interview
       }
     } catch (error) {
       console.error('Error starting interview:', error)
@@ -55,52 +157,61 @@ function AIInterview() {
     }
   }
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      
-      audioChunksRef.current = []
-      mediaRecorderRef.current = new MediaRecorder(stream)
-      
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
-      }
-      
-      mediaRecorderRef.current.start()
-      setIsRecording(true)
-      startTimeRef.current = Date.now()
-      
-      timerRef.current = setInterval(() => {
-        setRecordingDuration(Math.floor((Date.now() - startTimeRef.current) / 1000))
-      }, 1000)
-      
-    } catch (error) {
-      console.error('Error accessing microphone:', error)
-      alert('Could not access microphone. Please check permissions.')
+  const handleMicValidationComplete = (success) => {
+    setShowMicValidator(false)
+    if (success) {
+      setStep('interview')
     }
   }
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop()
-    }
+  const handleRecordingComplete = (audioBlob, duration, transcript = null, transcriptionStatus = 'pending') => {
+    const questionId = getCurrentQuestionId()
+    updateQuestionSession(questionId, { 
+      audioBlob,
+      transcript,
+      transcriptionStatus
+    })
+  }
+
+  const handleTimerComplete = (timeUsed, skipped = false) => {
+    const questionId = getCurrentQuestionId()
+    updateQuestionSession(questionId, { 
+      timeUsed,
+      skipped 
+    })
     
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
+    if (skipped) {
+      // Move to next question without submitting
+      moveToNextQuestion()
+    } else {
+      // Auto-submit the current recording
+      handleSubmitAnswer()
     }
-    
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
+  }
+
+  const handleSkipQuestion = (timeUsed) => {
+    handleTimerComplete(timeUsed, true)
+  }
+
+  const handleQuestionDone = (timeUsed) => {
+    handleTimerComplete(timeUsed, false)
+  }
+
+  const moveToNextQuestion = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1)
+      setIsRecording(false)
+    } else {
+      // Complete interview
+      handleCompleteInterview()
     }
-    
-    setIsRecording(false)
   }
 
   const handleSubmitAnswer = async () => {
-    if (audioChunksRef.current.length === 0) {
+    const questionId = getCurrentQuestionId()
+    const session = getCurrentSession()
+    
+    if (!session?.audioBlob && !session?.skipped) {
       alert('Please record an answer first')
       return
     }
@@ -108,34 +219,49 @@ function AIInterview() {
     setIsSubmitting(true)
     
     try {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+      let response
       
-      const response = await submitAnswer(
-        sessionId,
-        currentQuestionIndex,
-        audioBlob,
-        null,
-        recordingDuration
-      )
+      if (session.skipped) {
+        // Submit as skipped question
+        response = {
+          success: true,
+          answer_text: '[Question Skipped]',
+          analysis: { score: 0, feedback: 'Question was skipped by user.' }
+        }
+      } else {
+        // Submit recorded answer
+        response = await submitAnswer(
+          sessionId,
+          currentQuestionIndex,
+          session.audioBlob,
+          null,
+          session.timeUsed
+        )
+      }
       
       if (response.success) {
         const newAnswer = {
           question: questions[currentQuestionIndex].question,
           answer_text: response.answer_text,
-          analysis: response.analysis
+          analysis: response.analysis,
+          timeUsed: session.timeUsed,
+          skipped: session.skipped
         }
         
         setAnswers([...answers, newAnswer])
         
-        // Move to next question or finish
-        if (currentQuestionIndex < questions.length - 1) {
-          setCurrentQuestionIndex(currentQuestionIndex + 1)
-          setRecordingDuration(0)
-          audioChunksRef.current = []
-        } else {
-          // Complete interview
-          await handleCompleteInterview()
+        // Clean up blob URL to prevent memory leaks
+        if (session.audioBlob) {
+          URL.revokeObjectURL(session.audioBlob)
         }
+        
+        // Update session with transcript
+        updateQuestionSession(questionId, { 
+          transcript: response.answer_text 
+        })
+        
+        // Move to next question
+        moveToNextQuestion()
       }
     } catch (error) {
       console.error('Error submitting answer:', error)
@@ -147,16 +273,97 @@ function AIInterview() {
 
   const handleCompleteInterview = async () => {
     try {
-      const response = await completeInterview(sessionId)
+      setStep('analyzing')
+      setIsAnalyzing(true)
       
-      if (response.success) {
-        setOverallResults(response.overall_results)
-        setAnswers(response.detailed_answers)
-        setStep('results')
+      // Prepare analysis items for all answered questions
+      const analysisItems = []
+      questionSessions.forEach((session) => {
+        if (session.transcript && !session.skipped) {
+          analysisItems.push({
+            questionId: session.questionId,
+            questionText: session.questionText,
+            transcript: session.transcript,
+            targetedRole,
+            yearsOfExperience
+          })
+        }
+      })
+      
+      setAnalysisProgress({ current: 0, total: analysisItems.length + 1 }) // +1 for summary generation
+      
+      // Batch analyze all answers
+      console.log(`Starting analysis for ${analysisItems.length} questions`)
+      const analysisResults = await batchAnalyzeAnswers(analysisItems)
+      
+      // Update question sessions with analysis results
+      analysisResults.forEach((result) => {
+        updateQuestionSession(result.questionId, {
+          analysis: result,
+          analysisStatus: result.status
+        })
+      })
+      
+      setAnalysisProgress(prev => ({ ...prev, current: prev.current + 1 }))
+      
+      // Generate session summary using Gemini
+      console.log('Generating session summary...')
+      const summary = await generateSessionSummary(analysisResults, targetedRole)
+      setSessionSummary(summary)
+      
+      // Calculate overall performance
+      const overallPerformance = calculateOverallPerformance(analysisResults)
+      
+      // Create comprehensive session result
+      const sessionResult = createInterviewSessionResult(
+        sessionId,
+        'current-user', // TODO: Get from auth context
+        targetedRole,
+        analysisResults,
+        summary,
+        questionSessions
+      )
+      
+      // Generate performance insights
+      const insights = generatePerformanceInsights(sessionResult)
+      setPerformanceInsights(insights)
+      setFinalSessionResult(sessionResult)
+      
+      // Save session result to user's record
+      const saveSuccess = saveSessionResult(sessionResult)
+      if (saveSuccess) {
+        console.log('Session result saved to user record')
+      } else {
+        console.warn('Failed to save session result')
       }
+      
+      // Prepare detailed answers for results display
+      const detailedAnswers = Array.from(questionSessions.values()).map((session, index) => ({
+        question: session.questionText,
+        answer_text: session.transcript || '[Question Skipped]',
+        analysis: session.analysis || {
+          scores: { relevance: 0, clarity: 0, technicalDepth: 0, confidence: 0, overall: 0 },
+          strengths: [],
+          improvements: session.skipped ? ['Question was skipped'] : ['No analysis available'],
+          verdict: session.skipped ? 'Question was skipped by user' : 'Analysis not available'
+        },
+        timeUsed: session.timeUsed,
+        skipped: session.skipped,
+        transcriptionStatus: session.transcriptionStatus,
+        analysisStatus: session.analysisStatus
+      }))
+      
+      setOverallResults({ ...overallPerformance, sessionSummary: summary })
+      setAnswers(detailedAnswers)
+      setStep('results')
+      
+      console.log('Interview analysis and summary completed successfully')
+      
     } catch (error) {
       console.error('Error completing interview:', error)
-      alert('Failed to complete interview')
+      alert('Failed to complete interview analysis')
+    } finally {
+      setIsAnalyzing(false)
     }
   }
 
@@ -166,20 +373,34 @@ function AIInterview() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  // Cleanup function for memory management
+  const cleanup = () => {
+    // Clean up all stored audio blobs
+    questionSessions.forEach(session => {
+      if (session.audioBlob instanceof Blob) {
+        URL.revokeObjectURL(session.audioBlob)
+      }
+    })
+    setQuestionSessions(new Map())
+    
+    // Clear session storage
+    questions.forEach((_, index) => {
+      sessionStorage.removeItem(`interview_audio_${index}`)
+    })
+  }
+
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-      }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop()
-      }
-    }
+    return cleanup
   }, [])
 
   return (
     <div className="glass rounded-2xl p-8 border border-surface-border">
+      {/* Microphone Validator Modal */}
+      <MicrophoneValidator
+        isVisible={showMicValidator}
+        onValidationComplete={handleMicValidationComplete}
+      />
+      
       <AnimatePresence mode="wait">
         {step === 'upload' && (
           <motion.div
@@ -249,6 +470,41 @@ function AIInterview() {
                 <p className="mt-2 text-xs text-gray-500">
                   {jobDescription.length} characters • More detail = Better questions
                 </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    🎯 Targeted Role
+                  </label>
+                  <input
+                    type="text"
+                    value={targetedRole}
+                    onChange={(e) => setTargetedRole(e.target.value)}
+                    className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl 
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                      text-white placeholder-gray-500 transition-all"
+                    placeholder="e.g., Software Developer, Data Scientist"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    📅 Years of Experience
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={yearsOfExperience}
+                    onChange={(e) => setYearsOfExperience(parseInt(e.target.value) || 0)}
+                    className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl 
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                      text-white placeholder-gray-500 transition-all"
+                    placeholder="0"
+                    required
+                  />
+                </div>
               </div>
               
               <div>
@@ -325,6 +581,30 @@ function AIInterview() {
               </div>
             </div>
 
+            {/* Settings Toggle */}
+            <div className="flex justify-end">
+              <label className="flex items-center gap-2 text-sm text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={strictMode}
+                  onChange={(e) => setStrictMode(e.target.checked)}
+                  className="rounded"
+                />
+                Strict Mode (No Pause/Resume)
+              </label>
+            </div>
+
+            {/* Question Timer */}
+            <QuestionTimer
+              questionId={getCurrentQuestionId()}
+              allocatedTime={getCurrentSession()?.allocatedTime || 120}
+              onTimeUp={() => handleTimerComplete(getCurrentSession()?.allocatedTime || 120, false)}
+              onSkip={handleSkipQuestion}
+              onDone={handleQuestionDone}
+              strictMode={strictMode}
+              isRecording={isRecording}
+            />
+
             {/* Question Card */}
             <motion.div
               key={currentQuestionIndex}
@@ -342,6 +622,9 @@ function AIInterview() {
                     <span className="text-xs px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">
                       {questions[currentQuestionIndex].type}
                     </span>
+                    <span className="text-xs px-3 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">
+                      {formatTime(getCurrentSession()?.allocatedTime || 120)} allocated
+                    </span>
                   </div>
                   <p className="text-lg font-medium text-white leading-relaxed">
                     {questions[currentQuestionIndex].question}
@@ -351,64 +634,35 @@ function AIInterview() {
             </motion.div>
             
             {/* Recording Section */}
-            <div className="glass rounded-2xl p-8 text-center border border-surface-border">
-              {!isRecording && audioChunksRef.current.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-4xl">🎤</span>
-                  </div>
-                  <p className="text-gray-400 mb-6">Click the button below to record your answer</p>
-                  <motion.button
-                    onClick={startRecording}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-red-500/20 border-2 border-red-500/30 text-red-400 py-4 px-10 rounded-full 
-                      hover:bg-red-500/30 transition-all duration-200 font-semibold text-lg"
-                  >
-                    Start Recording
-                  </motion.button>
-                </motion.div>
-              )}
-              
-              {isRecording && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  <div className="flex items-center justify-center gap-4 mb-6">
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ repeat: Infinity, duration: 1.5 }}
-                      className="w-4 h-4 bg-red-500 rounded-full"
-                    ></motion.div>
-                    <p className="text-4xl font-mono font-bold text-white">{formatTime(recordingDuration)}</p>
-                  </div>
-                  <p className="text-gray-400 mb-6">Recording in progress...</p>
-                  <motion.button
-                    onClick={stopRecording}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="glass glass-hover text-white py-4 px-10 rounded-full 
-                      transition-all duration-200 font-semibold text-lg"
-                  >
-                    ⏹ Stop Recording
-                  </motion.button>
-                </motion.div>
-              )}
-              
-              {!isRecording && audioChunksRef.current.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
+            <AudioRecorder
+              questionId={getCurrentQuestionId()}
+              onRecordingComplete={handleRecordingComplete}
+              isRecording={isRecording}
+              onStartRecording={() => setIsRecording(true)}
+              onStopRecording={() => setIsRecording(false)}
+            />
+            
+            {/* Submit Section */}
+            {!isRecording && getCurrentSession()?.audioBlob && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4"
+              >
+                {/* Transcription Status */}
+                <TranscriptionStatus 
+                  session={getCurrentSession()} 
+                  className="max-w-2xl mx-auto"
+                />
+                
+                <div className="glass rounded-2xl p-8 text-center border border-surface-border">
                   <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-4xl">✓</span>
                   </div>
                   <p className="text-green-400 mb-2 text-lg font-semibold">Answer Recorded!</p>
-                  <p className="text-gray-400 mb-6">Duration: {formatTime(recordingDuration)}</p>
+                  <p className="text-gray-400 mb-6">
+                    Time used: {formatTime(getCurrentSession()?.timeUsed || 0)}
+                  </p>
                   <div className="flex gap-4 justify-center">
                     <motion.button
                       onClick={handleSubmitAnswer}
@@ -433,8 +687,17 @@ function AIInterview() {
                     </motion.button>
                     <motion.button
                       onClick={() => {
-                        audioChunksRef.current = []
-                        setRecordingDuration(0)
+                        const questionId = getCurrentQuestionId()
+                        const session = getCurrentSession()
+                        if (session?.audioBlob) {
+                          URL.revokeObjectURL(session.audioBlob)
+                        }
+                        updateQuestionSession(questionId, { 
+                          audioBlob: null, 
+                          timeUsed: 0,
+                          transcript: null,
+                          transcriptionStatus: 'pending'
+                        })
                       }}
                       disabled={isSubmitting}
                       whileHover={{ scale: 1.05 }}
@@ -445,9 +708,9 @@ function AIInterview() {
                       Re-record
                     </motion.button>
                   </div>
-                </motion.div>
-              )}
-            </div>
+                </div>
+              </motion.div>
+            )}
             
             {answers.length > 0 && (
               <motion.div
@@ -469,6 +732,57 @@ function AIInterview() {
           </motion.div>
         )}
         
+        {step === 'analyzing' && (
+          <motion.div
+            key="analyzing"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="text-center space-y-6"
+          >
+            <div className="w-24 h-24 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            
+            <div>
+              <h3 className="text-2xl font-semibold text-white mb-2">Analyzing Your Responses</h3>
+              <p className="text-gray-400 mb-6">
+                {analysisProgress.current < analysisProgress.total - 1 
+                  ? 'Our AI is evaluating your answers using advanced analysis...'
+                  : 'Generating personalized coaching summary...'
+                }
+              </p>
+            </div>
+            
+            {analysisProgress.total > 0 && (
+              <div className="max-w-md mx-auto">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-400">Progress</span>
+                  <span className="text-sm font-semibold text-white">
+                    {analysisProgress.current} / {analysisProgress.total}
+                  </span>
+                </div>
+                <div className="h-2 bg-surface-elevated rounded-full overflow-hidden border border-surface-border">
+                  <motion.div
+                    className="h-full bg-gradient-accent"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-blue-400 text-sm">
+                <span>🤖</span>
+                <span>Powered by Gemini AI for comprehensive analysis</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        
         {step === 'results' && overallResults && (
           <motion.div
             key="results"
@@ -476,99 +790,16 @@ function AIInterview() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
-            className="space-y-6"
           >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-8 rounded-2xl"
-            >
-              <div className="text-center mb-6">
-                <span className="text-6xl mb-4 block">🎉</span>
-                <h3 className="text-3xl font-bold mb-2">Interview Complete!</h3>
-                <p className="text-blue-100">Here's how you performed</p>
-              </div>
-              <div className="grid grid-cols-3 gap-6">
-                <div className="text-center bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-                  <p className="text-5xl font-bold mb-2">{overallResults.overall_score}</p>
-                  <p className="text-sm opacity-90">Overall Score</p>
-                </div>
-                <div className="text-center bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-                  <p className="text-5xl font-bold mb-2">{overallResults.technical_score}</p>
-                  <p className="text-sm opacity-90">Technical</p>
-                </div>
-                <div className="text-center bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-                  <p className="text-5xl font-bold mb-2">{overallResults.behavioral_score}</p>
-                  <p className="text-sm opacity-90">Behavioral</p>
-                </div>
-              </div>
-            </motion.div>
-            
-            <div className="space-y-4">
-              <h4 className="text-xl font-semibold text-white flex items-center gap-2">
-                <span>📝</span>
-                Detailed Feedback
-              </h4>
-              {answers.map((answer, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="glass rounded-xl p-6 border border-surface-border hover:border-blue-500/50 transition-colors"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 bg-gradient-accent rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-sm">{index + 1}</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-white mb-3">{answer.question}</p>
-                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">{answer.answer}</p>
-                      <div className="flex items-center gap-4 flex-wrap">
-                        <span className={`px-4 py-2 rounded-xl text-sm font-semibold ${
-                          answer.score >= 80 ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                          answer.score >= 60 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                          'bg-red-500/20 text-red-400 border border-red-500/30'
-                        }`}>
-                          Score: {answer.score}/100
-                        </span>
-                        <p className="text-sm text-gray-400 flex-1">{answer.feedback}</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            
-            <div className="flex gap-4 pt-4">
-              <motion.button
-                onClick={() => {
-                  setStep('upload')
-                  setSessionId(null)
-                  setQuestions([])
-                  setCurrentQuestionIndex(0)
-                  setAnswers([])
-                  setOverallResults(null)
-                  setResume(null)
-                  setJobDescription('')
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-1 bg-gradient-accent text-white py-4 px-6 rounded-xl hover:shadow-xl 
-                  transition-all duration-200 font-semibold professional-glow"
-              >
-                Start New Interview
-              </motion.button>
-              <motion.button
-                onClick={() => navigate('/')}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-1 glass glass-hover text-white py-4 px-6 rounded-xl 
-                  transition-all duration-200 font-semibold"
-              >
-                Back to Home
-              </motion.button>
-            </div>
+            <ResultsPage
+              overallResults={overallResults}
+              answers={answers}
+              sessionSummary={sessionSummary}
+              performanceInsights={performanceInsights}
+              onRetryInterview={handleRetryInterview}
+              onGoToDashboard={handleGoToDashboard}
+              onDownloadReport={handleDownloadReport}
+            />
           </motion.div>
         )}
       </AnimatePresence>

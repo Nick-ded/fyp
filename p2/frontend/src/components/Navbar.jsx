@@ -36,7 +36,13 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 bg-gradient-accent rounded-lg flex items-center justify-center professional-glow">
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ 
+                background: 'linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%)',
+                boxShadow: '0 2px 16px rgba(139, 92, 246, 0.3)'
+              }}
+            >
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-white">
@@ -66,12 +72,12 @@ const Navbar = () => {
               </span>
             </Link>
             <Link
-              to="/interview-selection"
+              to="/"
               className={`text-sm font-medium transition-colors ${
-                isActive('/interview-selection') ? 'text-white' : 'text-gray-400 hover:text-white'
+                isActive('/') ? 'text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
-              Interviews
+              Upload
             </Link>
             <Link
               to="/dashboard"

@@ -1,0 +1,380 @@
+/* Mobile-First Responsive Design for Interview App */
+
+/* Touch-friendly button sizes */
+@media (max-width: 768px) {
+  /* Minimum touch target size of 44px */
+  button, 
+  .btn,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px 16px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  /* Interview controls - larger for mobile */
+  .interview-controls button {
+    min-height: 56px;
+    min-width: 56px;
+    padding: 16px;
+    margin: 8px;
+  }
+
+  /* Timer controls */
+  .timer-controls button {
+    min-height: 48px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  /* Form inputs */
+  input, 
+  textarea, 
+  select {
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    border-radius: 12px;
+  }
+
+  /* File upload inputs */
+  input[type="file"] {
+    padding: 16px;
+    min-height: 60px;
+  }
+
+  /* Microphone validation modal */
+  .mic-check-modal {
+    margin: 16px;
+    max-width: calc(100vw - 32px);
+    padding: 24px 20px;
+  }
+
+  /* Audio waveform - responsive sizing */
+  .audio-waveform {
+    height: 80px;
+    margin: 16px 0;
+  }
+
+  .audio-waveform svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Question cards */
+  .question-card {
+    padding: 20px 16px;
+    margin: 16px 0;
+    border-radius: 16px;
+  }
+
+  .question-text {
+    font-size: 18px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  /* Progress indicators */
+  .progress-bar {
+    height: 8px;
+    border-radius: 4px;
+    margin: 12px 0;
+  }
+
+  .circular-progress {
+    width: 120px;
+    height: 120px;
+  }
+
+  /* Results page adaptations */
+  .results-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .score-card {
+    padding: 20px 16px;
+    text-align: center;
+  }
+
+  .radar-chart {
+    width: 250px;
+    height: 250px;
+    margin: 0 auto;
+  }
+
+  /* Accordion items */
+  .question-accordion .accordion-item {
+    margin-bottom: 12px;
+    border-radius: 12px;
+  }
+
+  .accordion-header {
+    padding: 16px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+  }
+
+  .accordion-content {
+    padding: 16px;
+    line-height: 1.6;
+  }
+
+  /* Navigation and headers */
+  .navbar {
+    padding: 12px 16px;
+    min-height: 60px;
+  }
+
+  .page-header {
+    padding: 20px 16px;
+    text-align: center;
+  }
+
+  .page-title {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+    opacity: 0.8;
+  }
+
+  /* Dashboard components */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .dashboard-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  /* Session history table */
+  .session-history-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .session-history-table table {
+    min-width: 600px;
+  }
+
+  .session-history-table th,
+  .session-history-table td {
+    padding: 12px 8px;
+    font-size: 14px;
+  }
+
+  /* Error boundaries and modals */
+  .error-modal,
+  .gemini-error-boundary {
+    margin: 16px;
+    padding: 24px 20px;
+    border-radius: 16px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .error-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .error-actions button {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  /* Loading states */
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+  }
+
+  .loading-text {
+    font-size: 16px;
+    margin-top: 16px;
+  }
+
+  /* Toast notifications */
+  .toast {
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: none;
+    padding: 16px;
+    border-radius: 12px;
+  }
+}
+
+/* Tablet adaptations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .results-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .question-card {
+    padding: 24px 20px;
+  }
+
+  .interview-controls {
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .interview-controls button {
+    min-height: 52px;
+    min-width: 52px;
+  }
+}
+
+/* Landscape phone adaptations */
+@media (max-width: 768px) and (orientation: landscape) {
+  .page-header {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+
+  .question-card {
+    padding: 16px;
+  }
+
+  .audio-waveform {
+    height: 60px;
+  }
+
+  .circular-progress {
+    width: 100px;
+    height: 100px;
+  }
+
+  .interview-controls {
+    padding: 12px 0;
+  }
+
+  .interview-controls button {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .audio-waveform,
+  .radar-chart,
+  .circular-progress {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none;
+  }
+
+  .transition-all,
+  .transition-colors,
+  .transition-transform {
+    transition: none;
+  }
+}
+
+/* Focus improvements for keyboard navigation */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Ensure text remains readable */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .text-xs { font-size: 12px; }
+  .text-sm { font-size: 14px; }
+  .text-base { font-size: 16px; }
+  .text-lg { font-size: 18px; }
+  .text-xl { font-size: 20px; }
+  .text-2xl { font-size: 24px; }
+  .text-3xl { font-size: 28px; }
+}
+
+/* Safe area insets for devices with notches */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(20px, env(safe-area-inset-top));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-left {
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+
+  .safe-area-right {
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+/* Prevent horizontal scroll */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Improve touch scrolling */
+.scrollable {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+}
+
+/* Prevent text selection on UI elements */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Improve tap targets */
+.tap-target {
+  position: relative;
+}
+
+.tap-target::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  z-index: -1;
+}

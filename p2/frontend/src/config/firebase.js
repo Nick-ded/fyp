@@ -13,7 +13,13 @@ const firebaseConfig = {
 }
 
 // Validate Firebase config
-const isConfigValid = Object.values(firebaseConfig).every(value => value && value !== 'undefined')
+const isConfigValid = Object.entries(firebaseConfig).every(([key, value]) => {
+  if (!value || value === 'undefined') {
+    console.warn(`Missing Firebase config: ${key}`)
+    return false
+  }
+  return true
+})
 
 if (!isConfigValid) {
   console.error('Firebase configuration is incomplete. Please check your .env.local file.')
@@ -24,24 +30,20 @@ if (!isConfigValid) {
 let app = null
 let auth = null
 
-// Only initialize if config is valid
-if (isConfigValid) {
-  try {
-    app = initializeApp(firebaseConfig)
-    auth = getAuth(app)
-    
-    // Set persistence to LOCAL so user stays logged in
-    setPersistence(auth, browserLocalPersistence)
-      .catch((error) => {
-        console.error('Error setting persistence:', error)
-      })
-    
-    console.log('Firebase initialized successfully')
-  } catch (error) {
-    console.error('Firebase initialization error:', error)
-  }
-} else {
-  console.warn('Firebase not configured. Firebase authentication features will be disabled.')
+try {
+  app = initializeApp(firebaseConfig)
+  auth = getAuth(app)
+  
+  // Set persistence to LOCAL so user stays logged in
+  setPersistence(auth, browserLocalPersistence)
+    .catch((error) => {
+      console.error('Error setting persistence:', error)
+    })
+  
+  console.log('✅ Firebase initialized successfully')
+} catch (error) {
+  console.error('❌ Firebase initialization error:', error)
+  console.error('Please ensure all Firebase environment variables are set correctly in .env.local')
 }
 
 export { auth }

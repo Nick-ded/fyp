@@ -1,5 +1,8 @@
 // Component exports for easier imports
-export { default as Navbar } from './Navbar';
+export { default as Navbar } from './PolishedNavbar';
+export { default as Button } from './Button';
+export { default as Card } from './Card';
+export { default as Badge } from './Badge';
 export { default as HeroSection } from './HeroSection';
 export { default as FeatureCard } from './FeatureCard';
 export { default as FeaturesSection } from './FeaturesSection';

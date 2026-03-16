@@ -48,16 +48,17 @@ const FeaturesSection = () => {
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
             Professional Interview Preparation
-            <span className="block text-accent-300 mt-2">
+            <span className="block text-violet-400 mt-2">
               Built for Success
             </span>
           </h2>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+          {/* UI audit fix: Improved text contrast and sizing */}
+          <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
             Comprehensive AI-powered tools designed for serious candidates
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => (
             <FeatureCard
               key={index}

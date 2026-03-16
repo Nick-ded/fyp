@@ -28,7 +28,8 @@ const SimpleNavbar = () => {
       scrolled ? 'bg-slate-900/95 border-b border-slate-800 shadow-lg' : 'bg-transparent'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        {/* UI audit fix: Standardized navbar height for better mobile UX */}
+        <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center">
@@ -113,7 +114,8 @@ const SimpleNavbar = () => {
       {/* Mobile menu */}
       {isOpen && (
         <div className="md:hidden bg-slate-900 border-t border-slate-800">
-          <div className="px-4 py-4 space-y-3">
+          {/* UI audit fix: Improved mobile menu spacing for better touch targets */}
+          <div className="px-4 py-6 space-y-4">
             <Link
               to="/"
               className={`block px-4 py-2 rounded-lg text-sm ${

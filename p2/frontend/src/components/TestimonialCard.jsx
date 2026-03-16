@@ -9,7 +9,7 @@ const TestimonialCard = ({ name, role, company, content, rating, delay = 0 }) =>
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay }}
-      className="card rounded-2xl p-8 card-shadow"
+      className="card rounded-xl p-8 card-shadow focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-violet-400"
     >
       {/* Rating */}
       <div className="flex space-x-1 mb-4">

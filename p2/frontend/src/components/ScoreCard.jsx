@@ -2,9 +2,9 @@ import React from 'react'
 
 function ScoreCard({ score }) {
   const getScoreColor = (score) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    return 'text-red-600'
+    if (score >= 80) return 'text-green-400'
+    if (score >= 60) return 'text-amber-400'
+    return 'text-red-400'
   }
 
   const getScoreLabel = (score) => {
@@ -15,14 +15,14 @@ function ScoreCard({ score }) {
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-8 text-white">
-      <h2 className="text-xl font-semibold mb-4">Confidence Score</h2>
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-8">
+      <h2 className="text-lg font-semibold text-gray-300 mb-6">Confidence Score</h2>
       <div className="flex items-center justify-center">
         <div className="text-center">
-          <div className={`text-6xl font-bold ${getScoreColor(score)} bg-white rounded-full w-32 h-32 flex items-center justify-center`}>
+          <div className={`text-6xl font-bold ${getScoreColor(score)} mb-4`}>
             {score}
           </div>
-          <p className="mt-4 text-lg font-medium">{getScoreLabel(score)}</p>
+          <p className="text-sm text-gray-400">{getScoreLabel(score)}</p>
         </div>
       </div>
     </div>

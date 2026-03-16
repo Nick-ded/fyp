@@ -1,0 +1,50 @@
+# Utilities (must be first)
+setuptools>=65.0.0
+wheel>=0.40.0
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+websockets==12.0
+
+# Database
+sqlalchemy==2.0.25
+
+# Video Processing
+opencv-python==4.9.0.80
+mediapipe==0.10.32
+deepface==0.0.99
+tf-keras==2.20.1
+
+# Scientific Computing (needed before audio processing)
+numpy==1.26.3
+scipy==1.12.0
+
+# Audio Processing
+openai-whisper
+librosa==0.10.1
+soundfile==0.12.1
+
+# Document Processing
+PyPDF2==3.0.1
+python-docx==1.1.0
+python-magic==0.4.27
+
+# Environment
+python-dotenv==1.0.1
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+google-auth==2.26.2
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+pyotp==2.9.0
+qrcode[pil]==7.4.2
+
+# AI/ML
+google-generativeai
+
+# Email validation
+email-validator

@@ -1,0 +1,254 @@
+# ============================================
+# AI Interview Analyzer - Complete Requirements
+# ============================================
+# 
+# This file contains ALL dependencies for the entire application
+# Both backend (Python) and frontend (Node.js) requirements
+# 
+# INSTALLATION INSTRUCTIONS:
+# 
+# 1. Install System Prerequisites:
+#    - Python 3.8 or higher
+#    - Node.js 16 or higher
+#    - FFmpeg (for audio processing)
+# 
+# 2. Install Backend Dependencies:
+#    cd backend
+#    python -m venv venv
+#    venv\Scripts\activate (Windows) or source venv/bin/activate (Mac/Linux)
+#    pip install -r ../requirements-all.txt
+# 
+# 3. Install Frontend Dependencies:
+#    cd frontend
+#    npm install
+#    (Frontend packages are listed below for reference)
+# 
+# ============================================
+
+# ============================================
+# BACKEND DEPENDENCIES (Python/pip)
+# ============================================
+
+# Core API Framework
+fastapi==0.109.0              # Modern web framework for building APIs
+uvicorn[standard]==0.27.0     # ASGI server with WebSocket support
+python-multipart==0.0.6       # File upload support
+sqlalchemy==2.0.25            # SQL toolkit and ORM
+pydantic>=2.0.0               # Data validation using Python type hints
+
+# WebSocket Support
+websockets>=11.0              # WebSocket protocol implementation
+
+# Computer Vision & Video Processing
+opencv-python-headless==4.9.0.80  # Computer vision library (no GUI)
+mediapipe==0.10.9             # Google's ML solutions for face detection
+
+# Audio Processing & Speech Recognition
+openai-whisper                # OpenAI's speech-to-text model (~140MB download on first run)
+librosa==0.10.1               # Audio analysis library
+soundfile>=0.12.1             # Audio file I/O
+audioread>=3.0.0              # Audio file reading
+ffmpeg-python>=0.2.0          # FFmpeg wrapper for Python
+
+# Scientific Computing
+numpy>=1.24.0,<2.0.0          # Numerical computing library
+scipy>=1.10.0,<2.0.0          # Scientific computing library
+
+# Document Processing
+PyPDF2==3.0.1                 # PDF file processing
+python-docx==1.1.0            # Microsoft Word document processing
+
+# Utilities
+setuptools>=65.0.0            # Package development and distribution
+python-dotenv>=1.0.0          # Environment variable management
+
+# AI/LLM Integration (Optional - for enhanced AI Interview feature)
+google-generativeai>=0.8.0    # Google Gemini API client
+
+# ============================================
+# FRONTEND DEPENDENCIES (Node.js/npm)
+# ============================================
+# 
+# These packages are installed via npm/package.json
+# Listed here for reference and documentation
+# 
+# To install: cd frontend && npm install
+# 
+# Core Dependencies:
+# - react@^18.2.0                  # UI framework
+# - react-dom@^18.2.0              # React DOM rendering
+# - react-router-dom@^6.21.1       # Client-side routing
+# - axios@^1.6.5                   # HTTP client for API calls
+# - framer-motion@^10.18.0         # Animation library
+# - lucide-react@^0.309.0          # Icon library
+# - recharts@^2.10.3               # Chart library for data visualization
+# 
+# Development Dependencies:
+# - @vitejs/plugin-react@^4.2.1    # Vite React plugin
+# - vite@^5.0.11                   # Build tool and dev server
+# - tailwindcss@^3.4.1             # CSS framework
+# - autoprefixer@^10.4.16          # CSS post-processor
+# - postcss@^8.4.33                # CSS transformer
+# - @types/react@^18.2.48          # TypeScript types for React
+# - @types/react-dom@^18.2.18      # TypeScript types for React DOM
+# 
+# ============================================
+
+# ============================================
+# SYSTEM REQUIREMENTS
+# ============================================
+# 
+# Operating System:
+# - Windows 10/11
+# - macOS 10.15 (Catalina) or higher
+# - Linux (Ubuntu 20.04+, Debian 10+, or equivalent)
+# 
+# Hardware:
+# - CPU: Dual-core processor (Quad-core recommended)
+# - RAM: 4GB minimum (8GB recommended)
+# - Storage: 2GB free space
+# - Camera: Required for Live Interview feature
+# - Microphone: Required for audio recording
+# 
+# Software:
+# - Python 3.8+ → https://www.python.org/downloads/
+# - Node.js 16+ → https://nodejs.org/
+# - FFmpeg → https://ffmpeg.org/download.html
+#   * Windows: winget install ffmpeg OR download and add to PATH
+#   * macOS: brew install ffmpeg
+#   * Linux: sudo apt install ffmpeg
+# 
+# ============================================
+
+# ============================================
+# INSTALLATION SIZE BREAKDOWN
+# ============================================
+# 
+# Backend (Python):
+# - Virtual Environment: ~500MB
+# - Installed Packages: ~1.5GB
+# - Whisper Model (first run): ~140MB
+# - Total: ~2.1GB
+# 
+# Frontend (Node.js):
+# - node_modules: ~300MB
+# - Build Output: ~2MB
+# - Total: ~300MB
+# 
+# System Tools:
+# - Python: ~100MB
+# - Node.js: ~50MB
+# - FFmpeg: ~100MB
+# - Total: ~250MB
+# 
+# Grand Total: ~2.7GB
+# 
+# ============================================
+
+# ============================================
+# QUICK START COMMANDS
+# ============================================
+# 
+# Backend Setup:
+# --------------
+# cd backend
+# python -m venv venv
+# venv\Scripts\activate              # Windows
+# source venv/bin/activate           # Mac/Linux
+# pip install -r ../requirements-all.txt
+# mkdir uploads temp
+# 
+# Frontend Setup:
+# ---------------
+# cd frontend
+# npm install
+# 
+# Running the Application:
+# ------------------------
+# Terminal 1 (Backend):
+# cd backend
+# venv\Scripts\activate              # Windows
+# source venv/bin/activate           # Mac/Linux
+# uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# 
+# Terminal 2 (Frontend):
+# cd frontend
+# npm run dev
+# 
+# Access Application:
+# -------------------
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
+# 
+# ============================================
+
+# ============================================
+# TROUBLESHOOTING
+# ============================================
+# 
+# Issue: "FFmpeg not found"
+# Solution: Install FFmpeg and add to PATH, restart terminal
+# 
+# Issue: "Module not found"
+# Solution: pip install -r requirements-all.txt --force-reinstall
+# 
+# Issue: "Port already in use"
+# Solution: Change port or kill process
+#   Windows: netstat -ano | findstr :8000 && taskkill /PID <PID> /F
+#   Mac/Linux: lsof -ti:8000 | xargs kill -9
+# 
+# Issue: "numpy version conflict"
+# Solution: pip install "numpy>=1.24.0,<2.0.0" --force-reinstall
+# 
+# Issue: "Virtual environment won't activate" (Windows PowerShell)
+# Solution: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# 
+# For more help, see TROUBLESHOOTING_INSTALL.md
+# 
+# ============================================
+
+# ============================================
+# NOTES
+# ============================================
+# 
+# - First run will download Whisper AI model (~140MB)
+# - Gemini API key is optional (for enhanced AI features)
+# - All processing happens locally (no data sent to external servers)
+# - Uploaded videos are deleted after processing
+# - Use virtual environment to isolate Python dependencies
+# - Frontend dependencies are managed separately via npm
+# 
+# ============================================
+
+# ============================================
+# DOCUMENTATION
+# ============================================
+# 
+# For detailed installation instructions, see:
+# - INSTALLATION_GUIDE.md - Complete installation guide
+# - QUICK_START.md - 5-minute setup guide
+# - DEPENDENCIES.md - Detailed dependency information
+# - INSTALL_CHEATSHEET.md - Quick command reference
+# - README.md - Main project documentation
+# 
+# ============================================
+
+# ============================================
+# LICENSE INFORMATION
+# ============================================
+# 
+# All dependencies are open-source with permissive licenses:
+# - FastAPI: MIT License
+# - OpenCV: Apache 2.0 License
+# - MediaPipe: Apache 2.0 License
+# - Whisper: MIT License
+# - React: MIT License
+# - Vite: MIT License
+# - Tailwind CSS: MIT License
+# 
+# All are free for commercial use.
+# 
+# ============================================
+
+# End of requirements-all.txt

@@ -94,7 +94,7 @@ const EnhancedHeroSection = () => {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-full text-xs font-medium text-gray-300 border border-white/10 hover:border-white/20 transition-colors"
+                  className="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-full text-xs font-medium text-dark-300 border border-white/10 hover:border-white/20 transition-colors"
                 >
                   {role.name}
                 </motion.span>
@@ -102,17 +102,17 @@ const EnhancedHeroSection = () => {
             </motion.div>
 
             {/* Enhanced Headline */}
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-[1.1]">
+            <h1 className="text-5xl md:text-6xl lg:text-6xl font-bold mb-6 leading-tight">
               <span className="text-white">Master Every Interview</span>
               <br />
               <span className="text-white">with </span>
-              <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-accent-400 via-accent-500 to-accent-600 bg-clip-text text-transparent">
                 AI
               </span>
               <span className="text-white">-Powered Analytics</span>
             </h1>
 
-            <p className="text-xl text-gray-400 mb-10 max-w-[520px] mx-auto lg:mx-0 leading-relaxed">
+            <p className="text-xl text-dark-400 mb-10 max-w-[520px] mx-auto lg:mx-0 leading-relaxed">
               Real-time performance tracking, instant feedback, and data-driven insights to transform your interview skills and land your dream role.
             </p>
 
@@ -122,9 +122,9 @@ const EnhancedHeroSection = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="group relative px-8 py-4 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-semibold text-lg overflow-hidden shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all flex items-center justify-center space-x-2"
+                  className="group relative px-8 py-4 bg-gradient-to-r from-accent-600 to-accent-700 text-white rounded-xl font-semibold text-lg overflow-hidden shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40 transition-all flex items-center justify-center space-x-2"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-violet-400 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-accent-400 to-accent-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Play className="w-5 h-5 relative z-10" />
                   <span className="relative z-10">Start Free Session</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform relative z-10" />
@@ -148,18 +148,18 @@ const EnhancedHeroSection = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-sm text-gray-400"
+              className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-sm text-dark-400"
             >
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-400" />
+                <CheckCircle className="w-4 h-4 text-semantic-success" />
                 <span>Free first session</span>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-400" />
+                <CheckCircle className="w-4 h-4 text-semantic-success" />
                 <span>No signup required</span>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-400" />
+                <CheckCircle className="w-4 h-4 text-semantic-success" />
                 <span>Instant AI feedback</span>
               </div>
             </motion.div>
@@ -173,30 +173,30 @@ const EnhancedHeroSection = () => {
             >
               <div className="text-center lg:text-left">
                 <div className="flex items-center justify-center lg:justify-start space-x-2 mb-2">
-                  <Sparkles className="w-5 h-5 text-violet-400" />
+                  <Sparkles className="w-5 h-5 text-accent-400" />
                   <div className="text-3xl font-bold text-white">
                     <CountUp end={5000} duration={2} />+
                   </div>
                 </div>
-                <div className="text-sm text-gray-400">Mock Sessions Completed</div>
+                <div className="text-sm text-dark-400">Mock Sessions Completed</div>
               </div>
               <div className="text-center lg:text-left">
                 <div className="flex items-center justify-center lg:justify-start space-x-2 mb-2">
-                  <TrendingUp className="w-5 h-5 text-green-400" />
+                  <TrendingUp className="w-5 h-5 text-semantic-success" />
                   <div className="text-3xl font-bold text-white">
                     <CountUp end={38} duration={2} />%
                   </div>
                 </div>
-                <div className="text-sm text-gray-400">Confidence Improvement</div>
+                <div className="text-sm text-dark-400">Confidence Improvement</div>
               </div>
               <div className="text-center lg:text-left">
                 <div className="flex items-center justify-center lg:justify-start space-x-2 mb-2">
-                  <CheckCircle className="w-5 h-5 text-blue-400" />
+                  <CheckCircle className="w-5 h-5 text-accent-500" />
                   <div className="text-3xl font-bold text-white">
                     <CountUp end={94} duration={2} />%
                   </div>
                 </div>
-                <div className="text-sm text-gray-400">Success Rate</div>
+                <div className="text-sm text-dark-400">Success Rate</div>
               </div>
             </motion.div>
           </motion.div>

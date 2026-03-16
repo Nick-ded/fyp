@@ -4,12 +4,15 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import App from './App.jsx'
 import './index.css'
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const root = document.getElementById('root')
+console.log('Root element:', root)
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={googleClientId}>
       <App />
     </GoogleOAuthProvider>
   </React.StrictMode>,
 )
+
+console.log('App rendered')
