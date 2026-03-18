@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -12,7 +12,6 @@ import InterviewResults from './pages/InterviewResults'
 import Upload from './pages/Upload'
 import VideoUpload from './pages/VideoUpload'
 import Dashboard from './pages/Dashboard'
-import Home from './pages/Home'
 import Results from './pages/Results'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -21,14 +20,6 @@ import FirebaseSignup from './pages/FirebaseSignup'
 import EnhancedResumeUpload from './pages/EnhancedResumeUpload'
 import Profile from './pages/Profile'
 import TestUpload from './pages/TestUpload'
-import TermsOfService from './pages/TermsOfService'
-import PrivacyPage from './pages/PrivacyPage'
-import CookiePage from './pages/CookiePage'
-import AboutUs from './pages/AboutUs'
-import Pricing from './pages/Pricing'
-import ComingSoon from './pages/ComingSoon'
-import Settings from './pages/Settings'
-import InterviewSelection from './pages/InterviewSelection'
 
 function App() {
   return (
@@ -49,8 +40,8 @@ function App() {
               <Route path="/test-upload" element={<TestUpload />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/results/:id" element={<Results />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
+              <Route path="/login" element={<Navigate to="/firebase-login" replace />} />
+              <Route path="/signup" element={<Navigate to="/firebase-signup" replace />} />
               <Route path="/firebase-login" element={<FirebaseLogin />} />
               <Route path="/firebase-signup" element={<FirebaseSignup />} />
               <Route path="/enhanced-resume-upload" element={<EnhancedResumeUpload />} />
