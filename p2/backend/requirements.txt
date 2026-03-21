@@ -1,43 +1,60 @@
-# Utilities (must be first)
+# ─── Core utilities (install first) ──────────────────────────────────────────
 setuptools>=65.0.0
 wheel>=0.40.0
 
-# Web Framework
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
+# ─── Web Framework ────────────────────────────────────────────────────────────
+fastapi==0.115.14
+uvicorn[standard]==0.34.3
 python-multipart==0.0.6
 websockets==12.0
 
-# Database
-sqlalchemy==2.0.25
+# ─── Database ─────────────────────────────────────────────────────────────────
+sqlalchemy==2.0.48
 
-# Video Processing
-opencv-python==4.9.0.80
-mediapipe==0.10.32
-deepface==0.0.99
-tf-keras==2.20.1
-
-# Scientific Computing (needed before audio processing)
-numpy==1.26.3
+# ─── Scientific Computing ─────────────────────────────────────────────────────
+# numpy 1.26.4 is the last 1.x — required by librosa/whisper on Python 3.12
+numpy==1.26.4
 scipy==1.12.0
 
-# Audio Processing
-openai-whisper
+# ─── Audio Processing ─────────────────────────────────────────────────────────
+# NOTE: FFmpeg must also be installed on your system (see README)
+openai-whisper==20250625
 librosa==0.10.1
-soundfile==0.12.1
+soundfile==0.13.1
 
-# Document Processing
+# ─── Document Processing ──────────────────────────────────────────────────────
 PyPDF2==3.0.1
 python-docx==1.1.0
-python-magic==0.4.27
+# python-magic is optional; file validation falls back gracefully without it
+# Requires libmagic system library — skip unless you need strict MIME checking
+# python-magic==0.4.27
 
-# Environment
+# ─── Environment ──────────────────────────────────────────────────────────────
 python-dotenv==1.0.1
 
-# Authentication
+# ─── Authentication & Security ────────────────────────────────────────────────
 python-jose[cryptography]==3.3.0
+# passlib 1.7.4 + bcrypt>=4.0 causes AttributeError on Python 3.12.
+# Fix: pin bcrypt to 4.0.1 AND install passlib with the patch below.
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# ─── Google / OAuth ───────────────────────────────────────────────────────────
 google-auth==2.26.2
 google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
-bcrypt==4.0.1
+
+# ─── Gemini AI ────────────────────────────────────────────────────────────────
+google-generativeai==0.8.6
+
+# ─── MFA / QR ─────────────────────────────────────────────────────────────────
+pyotp==2.9.0
+qrcode[pil]==7.4.2
+
+# ─── Video Processing (optional — disabled by default) ────────────────────────
+# These are large and slow to install. The video routers are disabled in main.py.
+# Uncomment only if you need video analysis features.
+# opencv-python==4.9.0.80
+# mediapipe==0.10.32
+# deepface==0.0.99
+# tf-keras==2.20.1

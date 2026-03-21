@@ -3,12 +3,22 @@ Authentication utilities for JWT token handling and password hashing
 """
 from datetime import datetime, timedelta
 from typing import Optional
+import base64
+import os
+
+# Patch: passlib 1.7.4 calls bcrypt.__about__.__version__ which doesn't exist
+# in bcrypt >= 4.0, causing an AttributeError on import. This shim fixes it.
+import bcrypt as _bcrypt
+if not hasattr(_bcrypt, '__about__'):
+    class _About:
+        __version__ = _bcrypt.__version__
+    _bcrypt.__about__ = _About()
+
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-import base64
 
 def encode_secret(secret: str):
     return base64.b64encode(secret.encode()).decode()
@@ -30,7 +40,7 @@ def get_current_user(
     token = credentials.credentials
 
 # Security configuration
-SECRET_KEY = "your-secret-key-change-this-in-production"  # Change in production!
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 
