@@ -48,6 +48,12 @@ export async function transcribeAudio(audioBlob, maxRetries = 3) {
 
   let lastError = null
   
+  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY
+  if (!geminiKey || geminiKey === 'your_gemini_api_key_here') {
+    console.warn('Gemini API key missing; skipping client-side transcription. Backend will transcribe on submit.')
+    return '[Transcription temporarily unavailable: key not configured]'
+  }
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Transcription attempt ${attempt}/${maxRetries}`)
@@ -86,14 +92,18 @@ export async function transcribeAudio(audioBlob, maxRetries = 3) {
       
     } catch (error) {
       lastError = error
-      console.error(`Transcription attempt ${attempt} failed:`, error.message)
+      console.error(`Transcription attempt ${attempt} failed:`, error?.message || error)
       
-      // Don't retry on certain errors
-      if (error.message?.includes('API key') || 
-          error.message?.includes('quota') ||
-          error.message?.includes('permission')) {
+      // Non-retryable conditions
+      if (error?.message?.includes('API key') || 
+          error?.message?.includes('quota') ||
+          error?.message?.includes('permission')) {
         console.error('Non-retryable error encountered:', error.message)
         break
+      }
+      if (error?.message?.includes('Failed to fetch') || error?.message?.includes('Network Error')) {
+        console.warn('Gemini network error detected; using fallback (backend transcription)')
+        return '[Transcription temporarily unavailable: network issue]'
       }
       
       // If this isn't the last attempt, wait before retrying
@@ -106,7 +116,8 @@ export async function transcribeAudio(audioBlob, maxRetries = 3) {
   }
   
   // All retries failed
-  throw new Error(`Transcription failed after ${maxRetries} attempts. Last error: ${lastError?.message || 'Unknown error'}`)
+  return '[Transcription temporarily unavailable after retries]'
+
 }
 
 /**

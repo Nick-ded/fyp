@@ -7,7 +7,7 @@ const API_ROOT_URL = API_BASE_URL.replace(/\/api\/?$/, '')
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 second timeout
+  timeout: 60000, // Increased to 60 seconds for long operations
   headers: {
     'Content-Type': 'application/json',
   },
@@ -248,7 +248,7 @@ export const getCurrentUser = async () => {
 
 export const checkApiHealth = async () => {
   const response = await axios.get(`${API_ROOT_URL}/health`, {
-    timeout: 8000,
+    timeout: 15000, // Increased to 15 seconds
     withCredentials: false,
   })
   return response.data
@@ -311,6 +311,27 @@ export const submitAnswer = async (sessionId, questionIndex, answerAudio, answer
 export const completeInterview = async (sessionId) => {
   return retryRequest(async () => {
     const response = await api.post('/ai-interview/complete', { session_id: sessionId })
+    return response.data
+  })
+}
+
+export const startAIInterviewRole = async (
+  role,
+  numQuestions,
+  yearsOfExperience,
+  options = {}
+) => {
+  const formData = new FormData()
+  formData.append('role', role)
+  formData.append('num_questions', numQuestions)
+  formData.append('years_of_experience', yearsOfExperience)
+
+  return retryRequest(async () => {
+    const response = await api.post('/ai-interview/start-role', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return response.data
   })
 }

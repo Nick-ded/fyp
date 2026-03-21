@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { startAIInterview, submitAnswer, completeInterview, checkApiHealth, getAIInterviewStatus } from '../api/api'
+import { startAIInterview, startAIInterviewRole, submitAnswer, completeInterview, checkApiHealth, getAIInterviewStatus } from '../api/api'
 import { batchAnalyzeAnswers, calculateOverallPerformance } from '../services/analysisService'
 import { generateSessionSummary, createInterviewSessionResult, generatePerformanceInsights } from '../services/summaryService'
 import { saveSessionResult } from '../services/sessionStorage'
@@ -46,6 +46,7 @@ function AIInterview() {
   const [jobDescription, setJobDescription] = useState('')
   const [numQuestions, setNumQuestions] = useState(5)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [interviewMode, setInterviewMode] = useState('role') // options: role, resume
   const [targetedRole, setTargetedRole] = useState('Software Developer')
   const [yearsOfExperience, setYearsOfExperience] = useState(3)
 
@@ -164,12 +165,19 @@ function AIInterview() {
 
   const handleStartInterview = async (e) => {
     e.preventDefault()
-    
-    if (!resume || !jobDescription.trim()) {
-      alert('Please upload a resume and provide a job description')
-      return
+
+    if (interviewMode === 'role') {
+      if (!targetedRole || !yearsOfExperience) {
+        alert('Select a role and experience level')
+        return
+      }
+    } else {
+      if (!resume || !jobDescription.trim()) {
+        alert('Please upload a resume and provide a job description')
+        return
+      }
     }
-    
+
     setIsGenerating(true)
     
     try {
@@ -185,16 +193,35 @@ function AIInterview() {
           ? 'intermediate'
           : 'advanced'
 
-      const enrichedJobDescription = `${jobDescription.trim()}\n\nCandidate Context:\n- Target Role: ${targetedRole.trim()}\n- Years of Experience: ${normalizedExperience}`
+      let response
+      if (interviewMode === 'role') {
+        response = await startAIInterviewRole(
+          targetedRole,
+          numQuestions,
+          normalizedExperience
+        )
+      } else {
+        const enrichedJobDescription = `${jobDescription.trim()}\n\nCandidate Context:\n- Target Role: ${targetedRole.trim()}\n- Years of Experience: ${normalizedExperience}`
 
-      const response = await startAIInterview(
-        resume,
-        enrichedJobDescription,
-        numQuestions,
-        { difficulty }
-      )
-      
+        response = await startAIInterview(
+          resume,
+          enrichedJobDescription,
+          numQuestions,
+          { difficulty }
+        )
+      }
+
       if (response.success) {
+        if (!Array.isArray(response.questions) || response.questions.length === 0) {
+          throw new Error('No questions returned from the server. Please try a different role/experience.')
+        }
+
+        console.log('AI interview started:', {
+          sessionId: response.session_id,
+          role: targetedRole,
+          questionsReceived: response.questions.length
+        })
+
         setSessionId(response.session_id)
         setQuestions(response.questions)
         setShowMicValidator(true) // Show mic validator before interview
@@ -249,7 +276,7 @@ function AIInterview() {
 
   const moveToNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
+      setCurrentQuestionIndex((prevIndex) => prevIndex + 1)
       setIsRecording(false)
     } else {
       // Complete interview
@@ -298,7 +325,7 @@ function AIInterview() {
           skipped: session.skipped
         }
         
-        setAnswers([...answers, newAnswer])
+        setAnswers((prevAnswers) => [...prevAnswers, newAnswer])
         
         // Clean up blob URL to prevent memory leaks
         if (session.audioBlob) {
@@ -528,7 +555,7 @@ function AIInterview() {
                       file:transition-all file:cursor-pointer
                       bg-surface-elevated border-2 border-surface-border rounded-xl p-3
                       hover:border-blue-500/50 transition-colors cursor-pointer"
-                    required
+                    required={interviewMode === 'resume'}
                   />
                   {resume && (
                     <motion.div
@@ -545,59 +572,107 @@ function AIInterview() {
                 </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  💼 Job Description
-                </label>
-                <textarea
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  rows={6}
-                  className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl 
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                    text-white placeholder-gray-500 transition-all resize-none"
-                  placeholder="Paste the job description here... Include key requirements, responsibilities, and qualifications."
-                  required
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  {jobDescription.length} characters • More detail = Better questions
-                </p>
-              </div>
+              {interviewMode === 'resume' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    💼 Job Description
+                  </label>
+                  <textarea
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    rows={6}
+                    className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl 
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                      text-white placeholder-gray-500 transition-all resize-none"
+                    placeholder="Paste the job description here... Include key requirements, responsibilities, and qualifications."
+                    required
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    {jobDescription.length} characters • More detail = Better questions
+                  </p>
+                </div>
+              )}
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    🎯 Targeted Role
-                  </label>
-                  <input
-                    type="text"
-                    value={targetedRole}
-                    onChange={(e) => setTargetedRole(e.target.value)}
-                    className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl 
-                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                      text-white placeholder-gray-500 transition-all"
-                    placeholder="e.g., Software Developer, Data Scientist"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    📅 Years of Experience
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="50"
-                    value={yearsOfExperience}
-                    onChange={(e) => setYearsOfExperience(parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl 
-                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                      text-white placeholder-gray-500 transition-all"
-                    placeholder="0"
-                    required
-                  />
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Mode</label>
+                <div className="flex gap-2">
+                  {['role', 'resume'].map((modeOption) => (
+                    <button
+                      type="button"
+                      key={modeOption}
+                      onClick={() => setInterviewMode(modeOption)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${interviewMode === modeOption ? 'bg-gradient-accent text-white' : 'bg-surface-elevated text-gray-300 hover:bg-surface-hover'}`}
+                    >
+                      {modeOption === 'role' ? 'Role-based (Free)' : 'Resume-based'}
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {interviewMode === 'role' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      🎯 Targeted Role
+                    </label>
+                    <select
+                      value={targetedRole}
+                      onChange={(e) => setTargetedRole(e.target.value)}
+                      className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                    >
+                      <option value="Frontend Developer">Frontend Developer</option>
+                      <option value="Backend Developer">Backend Developer</option>
+                      <option value="Software Developer">Software Developer</option>
+                      <option value="AI/ML Engineer">AI/ML Engineer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      📅 Years of Experience
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="50"
+                      value={yearsOfExperience}
+                      onChange={(e) => setYearsOfExperience(parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      🎯 Targeted Role
+                    </label>
+                    <input
+                      type="text"
+                      value={targetedRole}
+                      onChange={(e) => setTargetedRole(e.target.value)}
+                      className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all"
+                      placeholder="e.g., Software Developer, Data Scientist"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      📅 Years of Experience
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="50"
+                      value={yearsOfExperience}
+                      onChange={(e) => setYearsOfExperience(parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-3 bg-surface-elevated border-2 border-surface-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all"
+                      placeholder="0"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">

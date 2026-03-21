@@ -102,7 +102,7 @@ async def start_ai_interview(
             )
         
         # Generate questions with difficulty level
-        questions = ai_interviewer.generate_questions(
+        questions = await ai_interviewer.generate_questions(
             resume_text, 
             job_description, 
             num_questions,
@@ -138,6 +138,65 @@ async def start_ai_interview(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to start interview: {str(e)}")
+
+
+@router.post("/ai-interview/start-role")
+async def start_ai_interview_role(
+    role: str = Form(...),
+    num_questions: int = Form(5),
+    years_of_experience: int = Form(3),
+    db: Session = Depends(get_db)
+):
+    """Start a free interview flow with pre-generated questions for a role"""
+    try:
+        valid_roles = [
+            "frontend developer",
+            "backend developer",
+            "software developer",
+            "ai/ml engineer"
+        ]
+
+        raw_role = role.strip().lower()
+        if raw_role not in valid_roles and raw_role.replace(' ', '') not in [r.replace(' ', '') for r in valid_roles]:
+            raise HTTPException(status_code=400, detail=f"Invalid role. Choose from: {', '.join(valid_roles)}")
+
+        questions = ai_interviewer.generate_questions_for_role(
+            role,
+            num_questions,
+            years_of_experience
+        )
+
+        if not questions:
+            raise HTTPException(status_code=500, detail=f"No questions generated for role: {role}")
+
+        session_id = f"ai_session_{uuid.uuid4().hex[:12]}"
+        session = AIInterviewSession(
+            session_id=session_id,
+            resume_text="",
+            job_description=f"Free role interview for {role} ({years_of_experience} yrs)",
+            questions=json.dumps(questions),
+            num_questions=len(questions),
+            difficulty="beginner" if years_of_experience <=1 else "intermediate" if years_of_experience <=4 else "advanced",
+            status="active"
+        )
+
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+
+        return {
+            "success": True,
+            "session_id": session_id,
+            "questions": questions,
+            "num_questions": len(questions),
+            "role": role,
+            "years_of_experience": years_of_experience
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start role-based interview: {str(e)}")
 
 
 @router.post("/ai-interview/submit-answer")
@@ -192,7 +251,7 @@ async def submit_answer(
             raise HTTPException(status_code=400, detail="No answer provided")
         
         # Analyze answer
-        analysis = ai_interviewer.analyze_answer(question, answer_text, answer_duration)
+        analysis = await ai_interviewer.analyze_answer(question, answer_text, answer_duration)
         
         # Save answer
         answer = AIInterviewAnswer(

@@ -5,6 +5,7 @@ Analyzes candidate answers for knowledge assessment using Google Gemini API
 """
 import re
 import json
+import random
 from typing import List, Dict, Tuple
 import PyPDF2
 import docx
@@ -76,6 +77,225 @@ class AIInterviewer:
                 "How does your experience align with {role} requirements?",
             ]
         }
+
+        # Pre-generated 50-question bank per role for free interview mode
+        self.role_question_bank = {
+            "frontend developer": [
+                "What is the difference between let, const, and var in JavaScript?",
+                "Explain the concept of closures in JavaScript and provide an example.",
+                "How does event delegation work in JavaScript?",
+                "What are ES6 arrow functions and how do they differ from regular functions?",
+                "Describe the React component lifecycle methods.",
+                "What is the virtual DOM in React and how does it improve performance?",
+                "How do you manage state in a React application?",
+                "Explain the difference between controlled and uncontrolled components in React.",
+                "What are React hooks and how do they change the way we write components?",
+                "How do you optimize React application performance?",
+                "What is the difference between inline, internal, and external CSS?",
+                "Explain CSS specificity and how it's calculated.",
+                "What are CSS preprocessors like Sass and why would you use them?",
+                "How do you create responsive web designs?",
+                "What is the CSS box model?",
+                "Explain the difference between flexbox and CSS grid.",
+                "How do you handle browser compatibility issues in frontend development?",
+                "What are Progressive Web Apps (PWAs) and their key features?",
+                "How do you implement lazy loading for images and components?",
+                "What are Web Components and how do they work?",
+                "Explain the concept of single-page applications (SPAs).",
+                "How do you manage routing in a single-page application?",
+                "What are the benefits and drawbacks of using a frontend framework?",
+                "How do you handle form validation in React?",
+                "What is the difference between client-side and server-side rendering?",
+                "Explain the concept of state management in frontend applications.",
+                "How do you implement authentication in a frontend application?",
+                "What are the different ways to style React components?",
+                "How do you handle API calls in a React application?",
+                "What is the purpose of package.json in a Node.js project?",
+                "How do you manage dependencies in a frontend project?",
+                "What are the different build tools available for frontend development?",
+                "How do you set up a development environment for frontend development?",
+                "What are the best practices for writing clean and maintainable CSS?",
+                "How do you implement accessibility (a11y) in web applications?",
+                "What are the different types of storage available in browsers?",
+                "How do you handle errors and exceptions in JavaScript?",
+                "What is the event loop in JavaScript?",
+                "Explain the concept of promises and async/await in JavaScript.",
+                "How do you optimize website loading speed?",
+                "What are the different ways to handle cross-origin requests?",
+                "How do you implement internationalization (i18n) in a web application?",
+                "What are the security considerations for frontend applications?",
+                "How do you implement testing in a frontend application?",
+                "What are the different types of CSS animations and transitions?",
+                "How do you handle browser storage limitations?",
+                "What is the difference between cookies, localStorage, and sessionStorage?",
+                "How do you implement real-time features in a web application?",
+                "What are the best practices for mobile-first responsive design?",
+                "How do you handle memory leaks in JavaScript applications?",
+                "What is the role of TypeScript in frontend development?",
+                "How do you implement code splitting in a web application?"
+            ],
+            "backend developer": [
+                "What is the difference between REST and GraphQL APIs?",
+                "How do you design scalable database schemas?",
+                "Explain the concept of database normalization.",
+                "What are the differences between SQL and NoSQL databases?",
+                "How do you implement authentication and authorization in a web application?",
+                "What is the difference between synchronous and asynchronous programming?",
+                "How do you handle database connections in a web application?",
+                "Explain the concept of middleware in web frameworks.",
+                "What are the different types of HTTP status codes?",
+                "How do you implement caching in a web application?",
+                "What is the difference between stateless and stateful applications?",
+                "How do you handle file uploads in a web application?",
+                "Explain the concept of database transactions.",
+                "What are the different types of database indexes and when to use them?",
+                "How do you implement logging in a web application?",
+                "What is the difference between unit testing and integration testing?",
+                "How do you handle database migrations?",
+                "Explain the concept of dependency injection.",
+                "What are the different types of web servers and their use cases?",
+                "How do you implement rate limiting in an API?",
+                "What is the difference between monolithic and microservices architecture?",
+                "How do you handle database backups and recovery?",
+                "Explain the concept of database sharding.",
+                "What are the different types of caching strategies?",
+                "How do you implement background job processing?",
+                "What is the difference between HTTP and HTTPS?",
+                "How do you handle cross-origin resource sharing (CORS)?",
+                "Explain the concept of database connection pooling.",
+                "What are the different types of authentication methods?",
+                "How do you implement API versioning?",
+                "What is the difference between SOAP and REST?",
+                "How do you handle database query optimization?",
+                "Explain the concept of database replication.",
+                "What are the different types of load balancing techniques?",
+                "How do you implement error handling in APIs?",
+                "What is the difference between cookies and sessions?",
+                "How do you handle database schema changes in production?",
+                "Explain the concept of database indexing strategies.",
+                "What are the different types of web application firewalls?",
+                "How do you implement API documentation?",
+                "What is the difference between horizontal and vertical scaling?",
+                "How do you handle database deadlocks?",
+                "Explain the concept of database partitioning.",
+                "What are the different types of message queues?",
+                "How do you implement distributed caching?",
+                "What is the difference between TCP and UDP?",
+                "How do you handle API rate limiting and throttling?",
+                "Explain the concept of database views and stored procedures.",
+                "What are the different types of database backup strategies?",
+                "How do you implement multi-tenant applications?",
+                "What is the difference between eager and lazy loading?",
+                "How do you handle database connection leaks?"
+            ],
+            "software developer": [
+                "What is the software development lifecycle (SDLC)?",
+                "Explain the difference between agile and waterfall methodologies.",
+                "What are the principles of object-oriented programming?",
+                "How do you handle version control in a team environment?",
+                "What is the difference between compiled and interpreted languages?",
+                "How do you implement error handling and exception management?",
+                "Explain the concept of design patterns and their importance.",
+                "What are the different types of testing methodologies?",
+                "How do you optimize code performance?",
+                "What is the difference between threads and processes?",
+                "How do you implement logging and monitoring in applications?",
+                "Explain the concept of code refactoring.",
+                "What are the different types of data structures and their use cases?",
+                "How do you handle memory management in different programming languages?",
+                "What is the difference between unit testing and integration testing?",
+                "How do you implement security best practices in software development?",
+                "Explain the concept of continuous integration and continuous deployment (CI/CD).",
+                "What are the different types of software architecture patterns?",
+                "How do you handle database design and optimization?",
+                "What is the difference between functional and object-oriented programming?",
+                "How do you implement internationalization and localization?",
+                "Explain the concept of code reviews and their importance.",
+                "What are the different types of algorithms and their complexities?",
+                "How do you handle concurrent programming?",
+                "What is the difference between monolithic and microservices architecture?",
+                "How do you implement API design and documentation?",
+                "Explain the concept of dependency management.",
+                "What are the different types of software licenses?",
+                "How do you handle software deployment and rollback strategies?",
+                "What is the difference between frontend and backend development?",
+                "How do you implement user authentication and authorization?",
+                "Explain the concept of software testing pyramid.",
+                "What are the different types of databases and their use cases?",
+                "How do you handle software scalability and performance?",
+                "What is the difference between synchronous and asynchronous communication?",
+                "How do you implement caching strategies?",
+                "Explain the concept of software modularity.",
+                "What are the different types of software development environments?",
+                "How do you handle software documentation?",
+                "What is the difference between open-source and proprietary software?",
+                "How do you implement software monitoring and alerting?",
+                "Explain the concept of software architecture evolution.",
+                "What are the different types of software development tools?",
+                "How do you handle software project management?",
+                "What is the difference between agile and scrum methodologies?",
+                "How do you implement software quality assurance?",
+                "Explain the concept of software maintenance and support.",
+                "What are the different types of software bugs and their severity?",
+                "How do you handle software version control and branching strategies?",
+                "What is the difference between compiled and interpreted languages performance?",
+                "How do you implement software security testing?"
+            ],
+            "ai/ml engineer": [
+                "What is the difference between supervised and unsupervised learning?",
+                "How do you handle overfitting in machine learning models?",
+                "Explain the concept of gradient descent and its variants.",
+                "What are the different types of neural networks?",
+                "How do you evaluate the performance of a machine learning model?",
+                "What is the difference between classification and regression problems?",
+                "How do you handle imbalanced datasets?",
+                "Explain the concept of feature engineering.",
+                "What are the different types of activation functions in neural networks?",
+                "How do you implement cross-validation?",
+                "What is the difference between bagging and boosting?",
+                "How do you handle missing data in datasets?",
+                "Explain the concept of regularization in machine learning.",
+                "What are the different types of loss functions?",
+                "How do you implement dimensionality reduction?",
+                "What is the difference between parametric and non-parametric models?",
+                "How do you handle model deployment and serving?",
+                "Explain the concept of transfer learning.",
+                "What are the different types of optimization algorithms?",
+                "How do you implement hyperparameter tuning?",
+                "What is the difference between batch and online learning?",
+                "How do you handle model interpretability?",
+                "Explain the concept of ensemble learning.",
+                "What are the different types of clustering algorithms?",
+                "How do you implement recommendation systems?",
+                "What is the difference between deep learning and traditional machine learning?",
+                "How do you handle time series data?",
+                "Explain the concept of natural language processing.",
+                "What are the different types of computer vision techniques?",
+                "How do you implement A/B testing for ML models?",
+                "What is the difference between precision and recall?",
+                "How do you handle model monitoring and maintenance?",
+                "Explain the concept of reinforcement learning.",
+                "What are the different types of generative models?",
+                "How do you implement model compression and optimization?",
+                "What is the difference between supervised and semi-supervised learning?",
+                "How do you handle adversarial attacks on ML models?",
+                "Explain the concept of federated learning.",
+                "What are the different types of autoencoders?",
+                "How do you implement multi-modal learning?",
+                "What is the difference between online and offline learning?",
+                "How do you handle concept drift in ML models?",
+                "Explain the concept of meta-learning.",
+                "What are the different types of attention mechanisms?",
+                "How do you implement model fairness and bias detection?",
+                "What is the difference between statistical and deep learning approaches?",
+                "How do you handle large-scale ML training?",
+                "Explain the concept of few-shot learning.",
+                "What are the different types of graph neural networks?",
+                "How do you implement ML pipelines and MLOps?",
+                "What is the difference between model-centric and data-centric AI?",
+                "How do you handle uncertainty in ML predictions?"
+            ]
+        }
     
     def extract_text_from_file(self, file_content: bytes, filename: str) -> str:
         """Extract text from PDF or DOCX resume"""
@@ -127,7 +347,7 @@ class AIInterviewer:
         
         return found_skills[:8]  # Return top 8 skills
     
-    def generate_questions(
+    async def generate_questions(
         self, 
         resume_text: str, 
         job_description: str, 
@@ -149,14 +369,14 @@ class AIInterviewer:
         """
         if self.use_gemini and self.model:
             try:
-                return self._generate_questions_with_gemini(resume_text, job_description, num_questions, difficulty)
+                return await self._generate_questions_with_gemini(resume_text, job_description, num_questions, difficulty)
             except Exception as e:
                 print(f"⚠ Gemini API error: {e}. Falling back to rule-based generation.")
                 return self._generate_questions_fallback(resume_text, job_description, num_questions, difficulty)
         else:
             return self._generate_questions_fallback(resume_text, job_description, num_questions, difficulty)
     
-    def _generate_questions_with_gemini(
+    async def _generate_questions_with_gemini(
         self, 
         resume_text: str, 
         job_description: str, 
@@ -217,7 +437,7 @@ Return ONLY a JSON array in this exact format:
 Types can be: "technical", "behavioral", or "role_specific"
 """
         
-        response = self.model.generate_content(prompt)
+        response = await self.model.generate_content_async(prompt)
         response_text = response.text.strip()
         print(f"✓ Gemini API responded successfully")
         
@@ -300,18 +520,7 @@ Types can be: "technical", "behavioral", or "role_specific"
         
         templates = difficulty_templates.get(difficulty, difficulty_templates["intermediate"])
         
-        # Generate technical questions based on skills
-        tech_count = min(3, len(skills))
-        for i, skill in enumerate(skills[:tech_count]):
-            template = templates["technical"][i % len(templates["technical"])]
-            questions.append({
-                "question": template.format(skill=skill.title()),
-                "type": "technical",
-                "topic": skill,
-                "difficulty": difficulty
-            })
-        
-        # Add behavioral question
+        # Ensure we always generate num_questions with minimal duplicates
         behavioral_situations = {
             "beginner": [
                 "working in a team",
@@ -329,25 +538,64 @@ Types can be: "technical", "behavioral", or "role_specific"
                 "resolved a major production incident"
             ]
         }
-        
+
         situations = behavioral_situations.get(difficulty, behavioral_situations["intermediate"])
-        questions.append({
-            "question": templates["behavioral"][0].format(situation=situations[0]),
-            "type": "behavioral",
-            "topic": "teamwork",
-            "difficulty": difficulty
-        })
-        
-        # Add role-specific question
-        if role:
-            questions.append({
-                "question": self.question_templates["role_specific"][0].format(role=role),
+
+        # Build a dynamic list to prevent repeating the same question text
+        candidate_skills = skills.copy() if skills else ["your primary expertise"]
+        for i in range(num_questions):
+            if i < len(candidate_skills):
+                skill = candidate_skills[i]
+                template = random.choice(templates["technical"])
+                questions.append({
+                    "question": template.format(skill=skill.title()),
+                    "type": "technical",
+                    "topic": skill,
+                    "difficulty": difficulty
+                })
+            elif i == len(candidate_skills):
+                question_text = random.choice(templates["behavioral"]).format(situation=random.choice(situations))
+                questions.append({
+                    "question": question_text,
+                    "type": "behavioral",
+                    "topic": "teamwork",
+                    "difficulty": difficulty
+                })
+            elif i == len(candidate_skills) + 1 and role:
+                questions.append({
+                    "question": self.question_templates["role_specific"][random.randint(0, len(self.question_templates["role_specific"]) - 1)].format(role=role),
+                    "type": "role_specific",
+                    "topic": "motivation",
+                    "difficulty": difficulty
+                })
+            else:
+                fallback_skill = random.choice(candidate_skills)
+                question_text = random.choice(self.question_templates["technical"]).format(skill=fallback_skill.title())
+                questions.append({
+                    "question": question_text,
+                    "type": "technical",
+                    "topic": fallback_skill,
+                    "difficulty": difficulty
+                })
+
+        # Remove duplicates by question text while preserving order
+        seen = set()
+        unique_questions = []
+        for q in questions:
+            if q["question"] not in seen:
+                seen.add(q["question"])
+                unique_questions.append(q)
+
+        # If we don't have enough unique questions, fill with role questions
+        while len(unique_questions) < num_questions:
+            unique_questions.append({
+                "question": f"Please describe your approach to {role} problem-solving.",
                 "type": "role_specific",
-                "topic": "motivation",
+                "topic": role,
                 "difficulty": difficulty
             })
-        
-        return questions[:num_questions]
+
+        return unique_questions[:num_questions]
     
     def _extract_role(self, job_description: str) -> str:
         """Extract job role from job description"""
@@ -363,8 +611,62 @@ Types can be: "technical", "behavioral", or "role_specific"
                 return role
         
         return "this position"
-    
-    def analyze_answer(
+
+    def generate_questions_for_role(
+        self,
+        role: str,
+        num_questions: int = 5,
+        years_of_experience: int = 3
+    ) -> List[Dict[str, str]]:
+        """Return randomized pre-generated questions for a specific role"""
+        role_key = role.strip().lower()
+
+        canonical_map = {
+            "frontenddev": "frontend developer",
+            "frontend developer": "frontend developer",
+            "frontend": "frontend developer",
+            "backenddev": "backend developer",
+            "backend developer": "backend developer",
+            "backend": "backend developer",
+            "software developer": "software developer",
+            "software engineer": "software developer",
+            "ai/ml engineer": "ai/ml engineer",
+            "ai ml engineer": "ai/ml engineer",
+            "ai engineer": "ai/ml engineer",
+            "ml engineer": "ai/ml engineer"
+        }
+
+        role_key_normalized = canonical_map.get(role_key, role_key)
+        if role_key_normalized not in self.role_question_bank:
+            raise ValueError(f"Unsupported role: {role}")
+
+        questions_pool = self.role_question_bank[role_key_normalized]
+        if not questions_pool:
+            raise ValueError(f"No questions available for role: {role_key_normalized}")
+
+        selected_questions = random.sample(
+            questions_pool,
+            min(num_questions, len(questions_pool))
+        )
+
+        # Add difficulty-based metadata for analysis and interview adaptiveness
+        difficulty = "beginner"
+        if years_of_experience > 1:
+            difficulty = "intermediate"
+        if years_of_experience > 4:
+            difficulty = "advanced"
+
+        formatted = []
+        for q in selected_questions:
+            formatted.append({
+                "question": q,
+                "type": "technical" if "software" in q.lower() or "api" in q.lower() else "behavioral",
+                "topic": role_key_normalized,
+                "difficulty": difficulty
+            })
+
+        return formatted    
+    async def analyze_answer(
         self, 
         question: Dict[str, str], 
         answer_text: str,
@@ -379,14 +681,14 @@ Types can be: "technical", "behavioral", or "role_specific"
         """
         if self.use_gemini and self.model:
             try:
-                return self._analyze_answer_with_gemini(question, answer_text, answer_duration)
+                return await self._analyze_answer_with_gemini(question, answer_text, answer_duration)
             except Exception as e:
                 print(f"⚠ Gemini API error: {e}. Falling back to rule-based analysis.")
                 return self._analyze_answer_fallback(question, answer_text, answer_duration)
         else:
             return self._analyze_answer_fallback(question, answer_text, answer_duration)
     
-    def _analyze_answer_with_gemini(
+    async def _analyze_answer_with_gemini(
         self, 
         question: Dict[str, str], 
         answer_text: str,
@@ -422,7 +724,7 @@ Return ONLY a JSON object in this exact format:
 }}
 """
         
-        response = self.model.generate_content(prompt)
+        response = await self.model.generate_content_async(prompt)
         response_text = response.text.strip()
         print(f"✓ Gemini API analyzed answer successfully")
         

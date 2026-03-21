@@ -144,7 +144,7 @@ class GeminiErrorBoundary extends Component<Props, State> {
             )}
           </div>
           
-          {process.env.NODE_ENV === 'development' && this.state.error && (
+          {import.meta.env.MODE === 'development' && this.state.error && (
             <details className="mt-4 text-left">
               <summary className="text-xs text-gray-500 cursor-pointer">
                 Debug Info
