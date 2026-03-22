@@ -22,6 +22,37 @@ router = APIRouter()
 # Store active WebSocket connections for real-time interview
 active_connections: Dict[str, WebSocket] = {}
 
+# Template/form field patterns that indicate non-job-description content
+_TEMPLATE_FIELD_PATTERNS = [
+    r"^description\s*$", r"^impacted services", r"^primary configuration item",
+    r"^steps to reproduce", r"^workaround", r"^solution\s*$",
+    r"^provide a detailed explanation", r"^list the services",
+    r"^describe the main configuration", r"^summarize the steps",
+    r"^describe how your team", r"^describe how the known error",
+]
+
+def sanitize_job_description(raw: str) -> str:
+    """
+    Strip Jira/template/form-field content from job description.
+    Returns a clean role-context string safe to pass to Gemini.
+    """
+    import re
+    lines = raw.strip().splitlines()
+    clean_lines = []
+    for line in lines:
+        stripped = line.strip().lower()
+        is_template = any(re.match(p, stripped) for p in _TEMPLATE_FIELD_PATTERNS)
+        if not is_template and len(stripped) > 2:
+            clean_lines.append(line.strip())
+
+    cleaned = " ".join(clean_lines).strip()
+
+    # If nothing useful remains, fall back to a generic prompt
+    if len(cleaned) < 20:
+        cleaned = f"Generate relevant technical and behavioral interview questions for this role."
+
+    return cleaned
+
 
 @router.get("/ai-interview/status")
 async def ai_interview_status():
@@ -101,10 +132,15 @@ async def start_ai_interview(
                 detail=f"Resume text is too short ({len(resume_text.strip()) if resume_text else 0} characters). Please ensure the file contains readable text."
             )
         
+        # Sanitize job description - strip any template/form-like content
+        # and ensure it's treated as role context, not literal content
+        sanitized_jd = sanitize_job_description(job_description)
+        print(f"✓ Sanitized job description ({len(sanitized_jd)} chars): {sanitized_jd[:100]}...")
+        
         # Generate questions with difficulty level
         questions = await ai_interviewer.generate_questions(
             resume_text, 
-            job_description, 
+            sanitized_jd, 
             num_questions,
             difficulty
         )
@@ -425,3 +461,4 @@ async def get_interview_history(db: Session = Depends(get_db)):
         })
     
     return {"sessions": results}
+

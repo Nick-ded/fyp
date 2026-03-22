@@ -14,18 +14,19 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 }
 
-// Validate Firebase config
-const isConfigValid = Object.entries(firebaseConfig).every(([key, value]) => {
+// measurementId is optional (Analytics only)
+const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId']
+
+const missingKeys = requiredKeys.filter((key) => {
+  const value = firebaseConfig[key]
   if (!value || value === 'undefined') {
     console.warn(`Missing Firebase config: ${key}`)
-    return false
+    return true
   }
-  return true
+  return false
 })
 
-const missingKeys = Object.entries(firebaseConfig)
-  .filter(([key, value]) => !value || value === 'undefined')
-  .map(([key]) => key)
+const isConfigValid = missingKeys.length === 0
 
 // Initialize Firebase
 let app = null
@@ -41,17 +42,6 @@ try {
   } else {
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
-
-    // Analytics is optional and only available in supported browser contexts.
-    isSupported()
-      .then((supported) => {
-        if (supported && firebaseConfig.measurementId) {
-          analytics = getAnalytics(app)
-        }
-      })
-      .catch((error) => {
-        console.warn('Firebase analytics not initialized:', error)
-      })
 
     // Set persistence to LOCAL so user stays logged in
     setPersistence(auth, browserLocalPersistence)

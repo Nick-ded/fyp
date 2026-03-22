@@ -350,6 +350,17 @@ export const getAIInterviewHistory = async () => {
   })
 }
 
+// Sync Firebase user to local DB (call after Firebase login)
+export const syncFirebaseUser = async (idToken) => {
+  try {
+    const response = await api.post('/auth/firebase-sync', { token: idToken })
+    return response.data
+  } catch (err) {
+    console.warn('Firebase sync failed (non-critical):', err.message)
+    return null
+  }
+}
+
 // MFA APIs
 export const setupMFA = async (userId) => {
   const response = await api.post(`/mfa/setup?user_id=${userId}`)

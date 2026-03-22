@@ -75,18 +75,18 @@ export async function generateSessionSummary(
     }
   }
 
-  const prompt = `You are an expert interview coach with 15+ years of experience. Based on the following interview analysis results, generate a comprehensive session summary. Return ONLY raw JSON, no markdown, no backticks, no explanations.
+  const prompt = `You are an expert interview coach with 15+ years of experience helping candidates prepare for job interviews. Based on the following interview session analysis, generate a comprehensive coaching summary. Return ONLY raw JSON, no markdown, no backticks, no explanations.
 
-Targeted Role: ${targetedRole}
+Role Being Interviewed For: ${targetedRole}
 Number of Questions Analyzed: ${validResults.length}
-Results: ${JSON.stringify(validResults, null, 2)}
+Interview Analysis Results: ${JSON.stringify(validResults, null, 2)}
 
-Analyze the patterns across all responses and provide actionable coaching feedback. Return exactly this structure:
+Analyze the candidate's interview performance patterns and provide actionable coaching feedback to help them improve for their next interview. Return exactly this structure:
 {
-  "overallFeedback": "2-3 sentence summary of overall performance highlighting key patterns and readiness level",
-  "topStrengths": ["specific strength 1", "specific strength 2", "specific strength 3"],
-  "criticalImprovements": ["actionable improvement 1", "actionable improvement 2", "actionable improvement 3"],
-  "recommendedFocus": "one specific area to focus on before the next interview with actionable advice"
+  "overallFeedback": "2-3 sentence summary of overall interview performance, highlighting key patterns and job readiness",
+  "topStrengths": ["specific interview strength demonstrated", "another strength", "third strength"],
+  "criticalImprovements": ["specific actionable tip to improve interview performance", "another improvement", "third improvement"],
+  "recommendedFocus": "one specific interview skill to practice before the next interview, with concrete advice"
 }`
 
   let lastError = null

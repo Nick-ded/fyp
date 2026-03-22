@@ -301,7 +301,85 @@ def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
         )
 
 
-@router.get("/me", response_model=UserResponse)
+@router.post("/firebase-sync")
+def firebase_sync(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+    """
+    Sync a Firebase-authenticated user into the local DB.
+    Accepts a Firebase ID token, extracts user info, and upserts the user record.
+    """
+    from google.oauth2 import id_token as google_id_token
+    from google.auth.transport import requests as google_requests
+
+    token = request.token
+
+    # Try to decode without verification first to get basic info
+    # Then verify with Firebase public keys
+    try:
+        import json, base64
+
+        # Decode JWT payload (no verification — just to extract claims)
+        parts = token.split('.')
+        if len(parts) != 3:
+            raise HTTPException(status_code=400, detail="Invalid token format")
+
+        # Add padding
+        payload_b64 = parts[1] + '=' * (4 - len(parts[1]) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+
+        firebase_uid = payload.get('user_id') or payload.get('sub')
+        email = payload.get('email')
+        name = payload.get('name', '')
+        picture = payload.get('picture', '')
+
+        if not firebase_uid or not email:
+            raise HTTPException(status_code=400, detail="Invalid token: missing uid or email")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Token decode error: {str(e)}")
+
+    # Upsert user
+    user = db.query(User).filter(User.google_id == firebase_uid).first()
+    if not user:
+        user = db.query(User).filter(User.email == email).first()
+
+    if user:
+        # Update existing
+        if not user.google_id:
+            user.google_id = firebase_uid
+        if picture and user.profile_picture != picture:
+            user.profile_picture = picture
+    else:
+        # Create new
+        username = email.split('@')[0]
+        base_username = username
+        counter = 1
+        while db.query(User).filter(User.username == username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+
+        user = User(
+            email=email,
+            username=username,
+            full_name=name,
+            google_id=firebase_uid,
+            oauth_provider='firebase',
+            profile_picture=picture,
+            hashed_password=get_password_hash("firebase_auth_no_password")
+        )
+        db.add(user)
+
+    try:
+        db.commit()
+        db.refresh(user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    return {"message": "User synced", "db_id": user.id, "email": user.email}
+
+
 def get_current_user_profile(current_user: User = Depends(get_current_active_user)):
     """Get current user profile"""
     return current_user

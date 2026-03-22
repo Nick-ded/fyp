@@ -22,6 +22,19 @@ const FirebaseLogin = () => {
     }
   }, [user, navigate])
 
+  // Show error if Firebase is not configured
+  const firebaseConfigured = !!auth
+
+  // Clear any stale mock/invalid user data if Firebase is not configured
+  useEffect(() => {
+    if (!firebaseConfigured) {
+      localStorage.removeItem('user')
+      localStorage.removeItem('token')
+      localStorage.removeItem('newUserRedirect')
+      sessionStorage.removeItem('token')
+    }
+  }, [firebaseConfigured])
+
   const handleEmailLogin = async (e) => {
     e.preventDefault()
     setError('')
@@ -119,6 +132,23 @@ const FirebaseLogin = () => {
 
             {/* Login Form */}
             <form onSubmit={handleEmailLogin} className="space-y-6">
+              {/* Firebase not configured warning */}
+              {!firebaseConfigured && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3"
+                >
+                  <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-400">Firebase not configured</p>
+                    <p className="text-sm text-amber-300">
+                      Add your Firebase credentials to <code className="bg-slate-700 px-1 rounded">p2/frontend/.env</code> to enable login.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Error Message */}
               {error && (
                 <motion.div

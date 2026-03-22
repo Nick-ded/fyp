@@ -21,6 +21,12 @@ import {
   Sun,
   Moon,
   Sparkles,
+  Shield,
+  ShieldCheck,
+  ShieldOff,
+  Key,
+  AlertCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import EnhancedResumeUpload from '../components/EnhancedResumeUpload';
@@ -28,6 +34,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { setupMFA, verifyMFA, disableMFA } from '../api/api';
 
 const Profile = () => {
   const [profileData, setProfileData] = useState({
@@ -44,6 +51,14 @@ const Profile = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState(null);
+  const [otpInput, setOtpInput] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState('');
+  const [mfaSuccess, setMfaSuccess] = useState('');
+  const [showDisableConfirm, setShowDisableConfirm] = useState(false);
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -110,6 +125,49 @@ const Profile = () => {
   const handleResumeUploadSuccess = () => {
     setResumeUploaded(true);
     localStorage.setItem('resumeUploaded', 'true');
+  };
+
+  const getUserId = () => user?.uid || user?.id || null;
+
+  const handleEnableMFA = async () => {
+    setMfaError(''); setMfaSuccess(''); setMfaLoading(true);
+    try {
+      const userId = getUserId();
+      if (!userId) throw new Error('User ID not found. Please login again.');
+      const response = await setupMFA(userId);
+      setQrCodeData(response);
+      setShowQRCode(true);
+    } catch (err) {
+      setMfaError(err.message || 'Failed to setup MFA');
+    } finally { setMfaLoading(false); }
+  };
+
+  const handleVerifyMFA = async () => {
+    if (otpInput.length !== 6) { setMfaError('Please enter a 6-digit code'); return; }
+    setMfaError(''); setMfaSuccess(''); setMfaLoading(true);
+    try {
+      const userId = getUserId();
+      if (!userId) throw new Error('User ID not found.');
+      await verifyMFA(userId, otpInput);
+      setMfaEnabled(true); setShowQRCode(false); setQrCodeData(null); setOtpInput('');
+      setMfaSuccess('MFA enabled! Your account is now more secure.');
+    } catch (err) {
+      setMfaError(err.message || 'Invalid verification code');
+    } finally { setMfaLoading(false); }
+  };
+
+  const handleDisableMFA = async () => {
+    if (otpInput.length !== 6) { setMfaError('Please enter a 6-digit code'); return; }
+    setMfaError(''); setMfaSuccess(''); setMfaLoading(true);
+    try {
+      const userId = getUserId();
+      if (!userId) throw new Error('User ID not found.');
+      await disableMFA(userId, otpInput);
+      setMfaEnabled(false); setShowDisableConfirm(false); setOtpInput('');
+      setMfaSuccess('MFA disabled successfully.');
+    } catch (err) {
+      setMfaError(err.message || 'Failed to disable MFA');
+    } finally { setMfaLoading(false); }
   };
 
   const handleLogout = async () => {
@@ -544,60 +602,117 @@ const Profile = () => {
                   <div className={`flex items-center justify-between p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-700/50 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
                     <div>
                       <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Theme Preference</p>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Choose between light and dark mode
-                      </p>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Choose between light and dark mode</p>
                     </div>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={toggleTheme}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-slate-600 hover:bg-slate-500 text-white'
-                          : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                      }`}
-                    >
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={toggleTheme}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}>
                       {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                       <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
                     </motion.button>
                   </div>
 
-                  <div className={`flex items-center justify-between p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-700/50 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
-                    <div>
-                      <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Email Notifications</p>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Receive updates about your interview progress
-                      </p>
+                  {/* MFA Section */}
+                  <div className={`p-6 rounded-lg border ${theme === 'dark' ? 'bg-slate-700/50 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                        <Shield className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Multi-Factor Authentication</p>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Add an extra layer of security</p>
+                      </div>
                     </div>
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="w-5 h-5 text-blue-600 rounded cursor-pointer"
-                    />
-                  </div>
 
-                  <div className={`flex items-center justify-between p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-700/50 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
-                    <div>
-                      <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Performance Analytics</p>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Share analytics to help improve our AI
-                      </p>
+                    {/* MFA Status */}
+                    <div className={`flex items-center gap-3 p-3 rounded-lg mb-4 ${mfaEnabled ? 'bg-green-500/10 border border-green-500/20' : 'bg-orange-500/10 border border-orange-500/20'}`}>
+                      {mfaEnabled
+                        ? <><ShieldCheck className="w-5 h-5 text-green-400" /><span className="text-green-400 font-medium text-sm">MFA Enabled — account protected</span></>
+                        : <><ShieldOff className="w-5 h-5 text-orange-400" /><span className="text-orange-400 font-medium text-sm">MFA Disabled — enable for better security</span></>
+                      }
                     </div>
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="w-5 h-5 text-blue-600 rounded cursor-pointer"
-                    />
+
+                    {mfaError && (
+                      <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                        <p className="text-red-400 text-sm">{mfaError}</p>
+                      </div>
+                    )}
+                    {mfaSuccess && (
+                      <div className="mb-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                        <p className="text-green-400 text-sm">{mfaSuccess}</p>
+                      </div>
+                    )}
+
+                    {/* Enable flow */}
+                    {!mfaEnabled && !showQRCode && (
+                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        onClick={handleEnableMFA} disabled={mfaLoading}
+                        className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50">
+                        {mfaLoading ? 'Generating QR Code...' : 'Enable MFA'}
+                      </motion.button>
+                    )}
+
+                    {/* QR Code */}
+                    {showQRCode && qrCodeData && (
+                      <div>
+                        <div className="mb-4 p-4 rounded-lg bg-white flex flex-col items-center">
+                          <p className="text-gray-900 font-semibold mb-3">Scan with your authenticator app</p>
+                          <img src={`data:image/png;base64,${qrCodeData.qr_code}`} alt="MFA QR Code" className="w-48 h-48 mb-3" />
+                          <p className="text-xs text-gray-600 mb-1">Or enter manually:</p>
+                          <code className="px-3 py-1 bg-gray-100 rounded text-xs font-mono text-gray-900">{qrCodeData.secret}</code>
+                        </div>
+                        <input type="text" value={otpInput}
+                          onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="000000" maxLength={6}
+                          className={`w-full px-4 py-3 border rounded-lg text-center text-2xl tracking-widest font-mono mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
+                        <div className="flex gap-3">
+                          <button onClick={() => { setShowQRCode(false); setQrCodeData(null); setOtpInput(''); setMfaError(''); }}
+                            className={`flex-1 px-4 py-2 rounded-lg border font-medium transition-all ${theme === 'dark' ? 'border-slate-600 text-gray-300 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                            Cancel
+                          </button>
+                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            onClick={handleVerifyMFA} disabled={mfaLoading || otpInput.length !== 6}
+                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50">
+                            {mfaLoading ? 'Verifying...' : 'Verify & Enable'}
+                          </motion.button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Disable flow */}
+                    {mfaEnabled && !showDisableConfirm && (
+                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowDisableConfirm(true)}
+                        className="w-full px-4 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg font-semibold hover:bg-red-500/20 transition-all">
+                        Disable MFA
+                      </motion.button>
+                    )}
+                    {showDisableConfirm && (
+                      <div>
+                        <input type="text" value={otpInput}
+                          onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="Enter 6-digit code to confirm" maxLength={6}
+                          className={`w-full px-4 py-3 border rounded-lg text-center text-2xl tracking-widest font-mono mb-3 focus:outline-none focus:ring-2 focus:ring-red-500 ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
+                        <div className="flex gap-3">
+                          <button onClick={() => { setShowDisableConfirm(false); setOtpInput(''); setMfaError(''); }}
+                            className={`flex-1 px-4 py-2 rounded-lg border font-medium ${theme === 'dark' ? 'border-slate-600 text-gray-300 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                            Cancel
+                          </button>
+                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            onClick={handleDisableMFA} disabled={mfaLoading || otpInput.length !== 6}
+                            className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all disabled:opacity-50">
+                            {mfaLoading ? 'Disabling...' : 'Confirm Disable'}
+                          </motion.button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className={`pt-6 border-t ${theme === 'dark' ? 'border-slate-600' : 'border-gray-200'}`}>
                     <h3 className={`font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Danger Zone</h3>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="px-6 py-3 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-all font-medium border border-red-500/30"
-                    >
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      className="px-6 py-3 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-all font-medium border border-red-500/30">
                       Delete Account
                     </motion.button>
                   </div>

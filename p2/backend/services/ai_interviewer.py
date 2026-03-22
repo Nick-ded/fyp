@@ -409,23 +409,30 @@ class AIInterviewer:
         
         difficulty_instruction = difficulty_instructions.get(difficulty, difficulty_instructions["intermediate"])
         
-        prompt = f"""You are an expert technical interviewer. Based on the candidate's resume and the job description, generate {num_questions} relevant interview questions at {difficulty.upper()} difficulty level.
+        prompt = f"""You are an expert technical interviewer conducting a job interview. Based on the candidate's resume and the job description, generate {num_questions} interview questions at {difficulty.upper()} difficulty level.
 
 Resume:
 {resume_text[:2000]}
 
-Job Description:
+Job Description / Role Context:
 {job_description[:1000]}
 
 Difficulty Level: {difficulty.upper()}
 {difficulty_instruction}
 
+CRITICAL INSTRUCTIONS:
+- Generate ONLY proper job interview questions that a hiring manager would ask a candidate
+- Questions must be conversational and open-ended (e.g. "Tell me about...", "How would you...", "Describe a time when...")
+- Do NOT reproduce any template fields, form fields, document sections, or structured data from the job description
+- Do NOT generate questions that look like form fields or document templates
+- Every question must end with a "?" and be something a human interviewer would verbally ask
+- Focus on the candidate's skills, experience, problem-solving, and fit for the role
+
 Generate exactly {num_questions} interview questions that:
 1. Match the {difficulty} difficulty level
-2. Test technical skills mentioned in the resume
-3. Assess fit for the job requirements
-4. Include a mix of technical, behavioral, and role-specific questions
-5. Are clear and specific
+2. Test technical skills and experience relevant to the role
+3. Include behavioral questions using the STAR method (Situation, Task, Action, Result)
+4. Are clear, conversational, and specific
 
 Return ONLY a JSON array in this exact format:
 [
@@ -449,15 +456,28 @@ Types can be: "technical", "behavioral", or "role_specific"
         
         questions = json.loads(response_text)
         
-        # Validate and ensure correct format
+        # Validate and ensure correct format — filter out template/form-field content
+        template_indicators = [
+            "provide a detailed", "list the services", "describe the main",
+            "summarize the steps", "describe how your team", "describe how the known",
+            "impacted services", "configuration item", "steps to reproduce",
+            "workaround", "known error"
+        ]
+        
         validated_questions = []
         for q in questions[:num_questions]:
             if isinstance(q, dict) and "question" in q:
-                validated_questions.append({
-                    "question": q.get("question", ""),
-                    "type": q.get("type", "general"),
-                    "topic": q.get("topic", "general")
-                })
+                question_text = q.get("question", "")
+                # Skip questions that look like template fields
+                q_lower = question_text.lower()
+                is_template = any(indicator in q_lower for indicator in template_indicators)
+                # Must end with ? and not be a template field
+                if not is_template and question_text.strip().endswith("?"):
+                    validated_questions.append({
+                        "question": question_text,
+                        "type": q.get("type", "general"),
+                        "topic": q.get("topic", "general")
+                    })
         
         return validated_questions if validated_questions else self._generate_questions_fallback(resume_text, job_description, num_questions, difficulty)
     
@@ -696,9 +716,9 @@ Types can be: "technical", "behavioral", or "role_specific"
     ) -> Dict[str, any]:
         """Analyze answer using Gemini API"""
         print(f"🤖 Using Gemini API to analyze answer...")
-        prompt = f"""You are an expert interviewer evaluating a candidate's answer.
+        prompt = f"""You are an expert interviewer evaluating a candidate's spoken answer during a job interview.
 
-Question: {question['question']}
+Question asked: {question['question']}
 Question Type: {question.get('type', 'general')}
 Topic: {question.get('topic', 'general')}
 
@@ -707,21 +727,21 @@ Candidate's Answer:
 
 Answer Duration: {answer_duration:.1f} seconds
 
-Evaluate this answer and provide:
-1. Overall score (0-100)
-2. Relevance score (0-100) - How well does it address the question?
-3. Completeness score (0-100) - Is the answer thorough?
-4. Clarity score (0-100) - Is it well-articulated?
-5. Constructive feedback (2-3 sentences)
-
-Return ONLY a JSON object in this exact format:
+Evaluate this interview answer and provide coaching feedback. Return ONLY a JSON object in this exact format:
 {{
   "score": 85,
   "relevance": 90,
   "completeness": 80,
   "clarity": 85,
-  "feedback": "Your feedback here."
+  "feedback": "2-3 sentences of constructive coaching feedback about how well the candidate answered this interview question."
 }}
+
+Scoring criteria:
+- score (0-100): Overall quality of the interview answer
+- relevance (0-100): How directly the answer addresses the interview question
+- completeness (0-100): Whether the answer is thorough with examples
+- clarity (0-100): How clearly and confidently the answer was communicated
+- feedback: Actionable coaching advice for improving interview performance
 """
         
         response = await self.model.generate_content_async(prompt)

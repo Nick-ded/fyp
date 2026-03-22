@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { auth } from '../config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { getAuthToken, setAuthToken, clearAuthToken } from '../utils/authStorage'
+import { syncFirebaseUser } from '../api/api'
 
 const AuthContext = createContext()
 
@@ -12,29 +13,24 @@ export const AuthProvider = ({ children }) => {
   const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
-    // Check for existing token in session storage (with localStorage migration fallback).
-    const storedToken = getAuthToken()
-    const storedUser = localStorage.getItem('user')
-    
-    if (storedToken && storedUser) {
-      try {
-        const userData = JSON.parse(storedUser)
-        console.log('User loaded from localStorage:', userData.email)
-        setUser(userData)
-      } catch (err) {
-        console.error('Error parsing stored user:', err)
+    // Only restore from localStorage if Firebase is properly configured
+    if (auth) {
+      const storedToken = getAuthToken()
+      const storedUser = localStorage.getItem('user')
+      
+      if (storedToken && storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          console.log('User loaded from localStorage:', userData.email)
+          setUser(userData)
+        } catch (err) {
+          console.error('Error parsing stored user:', err)
+        }
       }
     }
     
     if (!auth) {
-      console.warn('Firebase auth not initialized - using mock user for development')
-      // For development, set a mock user
-      setUser({
-        uid: 'mock-user-id',
-        email: 'mock@example.com',
-        displayName: 'Mock User',
-        emailVerified: true
-      })
+      console.warn('Firebase auth not initialized - Firebase env vars are missing. Login is disabled.')
       setLoading(false)
       return
     }
@@ -62,6 +58,9 @@ export const AuthProvider = ({ children }) => {
             setIsNewUser(isNew)
             
             const idToken = await firebaseUser.getIdToken()
+            
+            // Sync user to local DB (creates record if first login)
+            await syncFirebaseUser(idToken)
             
             // Store user info
             const userData = {

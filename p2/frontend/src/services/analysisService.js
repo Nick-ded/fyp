@@ -77,25 +77,25 @@ export async function analyzeAnswer(
     }
   }
 
-  const prompt = `You are an expert technical interviewer. Analyze the interview answer below and return ONLY a valid JSON object. No markdown, no backticks, no explanation — raw JSON only.
+  const prompt = `You are an expert interview coach evaluating a candidate's spoken answer during a job interview. Analyze the answer and return ONLY a valid JSON object. No markdown, no backticks, no explanation — raw JSON only.
 
-Question: ${questionText}
-Candidate Answer: ${transcript}
-Targeted Role: ${targetedRole}
+Interview Question: ${questionText}
+Candidate's Answer: ${transcript}
+Role Being Interviewed For: ${targetedRole}
 Years of Experience: ${yearsOfExperience}
 
-Return exactly this JSON structure:
+Evaluate how well the candidate answered this interview question. Return exactly this JSON structure:
 {
   "scores": {
-    "relevance": <integer 0-10>,
-    "clarity": <integer 0-10>,
-    "technicalDepth": <integer 0-10>,
-    "confidence": <integer 0-10>,
-    "overall": <integer 0-100>
+    "relevance": <integer 0-10, how directly the answer addresses the question>,
+    "clarity": <integer 0-10, how clearly and confidently it was communicated>,
+    "technicalDepth": <integer 0-10, depth of technical knowledge shown>,
+    "confidence": <integer 0-10, confidence and structure of the response>,
+    "overall": <integer 0-100, overall interview answer quality>
   },
-  "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement 1", "improvement 2"],
-  "verdict": "one concise sentence summarizing the answer quality"
+  "strengths": ["specific strength about this answer", "another strength"],
+  "improvements": ["specific actionable improvement for this answer", "another improvement"],
+  "verdict": "one concise sentence summarizing how well the candidate answered this interview question"
 }`
 
   let lastError = null

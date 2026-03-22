@@ -50,7 +50,7 @@ function Home() {
                   transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                 />
               )}
-            </motion.button>
+            </button>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -64,7 +64,7 @@ function Home() {
               }`}
             >
               🤖 Live Interview
-            </button>
+            </motion.button>
           </div>
 
           {/* Tab Content */}
