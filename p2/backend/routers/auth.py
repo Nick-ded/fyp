@@ -680,12 +680,14 @@ async def upload_resume_anonymous(
     uploaded_at = datetime.utcnow()
 
     return {
+        "success": True,
         "message": "Resume uploaded and analyzed successfully",
         "filename": filename,
         "resume_text": resume_text[:500] + "..." if len(resume_text) > 500 else resume_text,
+        "extracted_text": resume_text[:500] + "..." if len(resume_text) > 500 else resume_text,
         "uploaded_at": uploaded_at,
-        "analysis": analysis,  # Include the analysis scores
-        "anonymous": True  # Mark as anonymous upload
+        "analysis": analysis,
+        "anonymous": True
     }
 
 

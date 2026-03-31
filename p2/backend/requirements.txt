@@ -59,3 +59,6 @@ qrcode[pil]==7.4.2
 # mediapipe==0.10.32
 # deepface==0.0.99
 # tf-keras==2.20.1
+
+# ─── FFmpeg (bundled — used for audio conversion when system FFmpeg is absent) ─
+imageio-ffmpeg==0.6.0
