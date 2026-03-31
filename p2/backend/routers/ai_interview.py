@@ -8,14 +8,16 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 import json
 import uuid
+import os
+import shutil
+import subprocess
+import tempfile
 from typing import List, Dict
 
 from database import get_db
 from models import AIInterviewSession, AIInterviewAnswer
 from services.ai_interviewer import ai_interviewer
 from services.audio_processing import transcribe_audio
-import os
-import tempfile
 
 router = APIRouter()
 
@@ -267,23 +269,52 @@ async def submit_answer(
         # Get answer text
         if answer_audio:
             print(f"Received audio file: {answer_audio.filename}, size: {answer_audio.file.tell() if hasattr(answer_audio, 'file') else 'unknown'}")
-            # Transcribe audio
-            temp_audio_path = None
+            temp_webm_path = None
+            temp_wav_path = None
             try:
                 # Save raw browser audio (.webm) temporarily
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_file:
                     content = await answer_audio.read()
                     print(f"Audio content size: {len(content)} bytes")
                     temp_file.write(content)
-                    temp_audio_path = temp_file.name
-                
-                # Transcribe
-                print(f"Starting transcription for file: {temp_audio_path}")
-                transcript_data = transcribe_audio(temp_audio_path)
+                    temp_webm_path = temp_file.name
+
+                # Ensure bundled ffmpeg alias is on PATH
+                from services.audio_processing import _ensure_ffmpeg_on_path
+                _ensure_ffmpeg_on_path()
+
+                # Convert .webm → .wav so Whisper can decode it
+                temp_wav_path = temp_webm_path.replace(".webm", ".wav")
+                ffmpeg_cmd = shutil.which("ffmpeg")
+                if not ffmpeg_cmd:
+                    try:
+                        import imageio_ffmpeg
+                        ffmpeg_cmd = imageio_ffmpeg.get_ffmpeg_exe()
+                    except Exception:
+                        pass
+
+                if ffmpeg_cmd:
+                    conv = subprocess.run(
+                        [ffmpeg_cmd, "-y", "-i", temp_webm_path,
+                         "-ar", "16000", "-ac", "1", "-f", "wav", temp_wav_path],
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+                    )
+                    if conv.returncode == 0:
+                        transcribe_path = temp_wav_path
+                        print(f"Converted webm→wav: {temp_wav_path}")
+                    else:
+                        print(f"FFmpeg conversion failed: {conv.stderr.decode(errors='replace')[-200:]}")
+                        transcribe_path = temp_webm_path
+                else:
+                    print("FFmpeg not found — passing webm directly to Whisper")
+                    transcribe_path = temp_webm_path
+
+                print(f"Starting transcription for file: {transcribe_path}")
+                transcript_data = transcribe_audio(transcribe_path)
                 transcribed_text = transcript_data["text"]
                 print(f"Transcription result: '{transcribed_text}'")
-                
-                # Use transcribed text if available, otherwise use provided text or fallback
+
                 if transcribed_text and transcribed_text.strip():
                     answer_text = transcribed_text
                 elif answer_text:
@@ -291,7 +322,7 @@ async def submit_answer(
                 else:
                     print("Transcription returned empty text, using fallback")
                     answer_text = "[Audio transcription failed - unable to process audio]"
-                
+
             finally:
                 for p in [temp_webm_path, temp_wav_path]:
                     if p and os.path.exists(p):

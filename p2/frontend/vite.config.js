@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react'
 const devHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  // Required for Firebase Google popup to work — must NOT be same-origin
-  'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+  // Required for Firebase Google popup to work
+  'Cross-Origin-Opener-Policy': 'unsafe-none',
   'Cross-Origin-Embedder-Policy': 'unsafe-none',
   'Content-Security-Policy': [
     "default-src 'self'",

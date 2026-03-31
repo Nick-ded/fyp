@@ -70,3 +70,28 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+env/
+
+# Database
+*.db
+*.sqlite3
+
+# Uploaded files (user data — never commit)
+backend/uploads/
+backend/temp/
+
+# Environment files
+backend/.env
+frontend/.env
